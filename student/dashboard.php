@@ -10,13 +10,17 @@ requireRole('student');
 $user = currentUser();
 
 $stmt = $pdo->prepare(
-    'SELECT student_id, university_name, department, academic_level
+    'SELECT
+        student_id,
+        university_name,
+        department,
+        academic_level
      FROM students
      WHERE user_id = ?
      LIMIT 1'
 );
 
-$stmt->execute([$user['user_id']]);
+$stmt->execute([$user['id']]);
 $student = $stmt->fetch();
 
 $studentId = $student ? (int) $student['student_id'] : 0;
@@ -38,13 +42,21 @@ if ($studentId > 0) {
     );
 
     $stmt->execute([$studentId]);
+
     $applicationStats = $stmt->fetch();
 
     if ($applicationStats) {
-        $totalApplications = (int) ($applicationStats['total'] ?? 0);
-        $submittedApplications = (int) ($applicationStats['submitted'] ?? 0);
-        $shortlistedApplications = (int) ($applicationStats['shortlisted'] ?? 0);
-        $selectedApplications = (int) ($applicationStats['selected'] ?? 0);
+        $totalApplications =
+            (int) ($applicationStats['total'] ?? 0);
+
+        $submittedApplications =
+            (int) ($applicationStats['submitted'] ?? 0);
+
+        $shortlistedApplications =
+            (int) ($applicationStats['shortlisted'] ?? 0);
+
+        $selectedApplications =
+            (int) ($applicationStats['selected'] ?? 0);
     }
 }
 
@@ -55,15 +67,23 @@ $stmt = $pdo->query(
 );
 
 $opportunityStats = $stmt->fetch();
-$totalOpportunities = (int) ($opportunityStats['total'] ?? 0);
+
+$totalOpportunities =
+    (int) ($opportunityStats['total'] ?? 0);
 
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
     <title>Student Dashboard | CareerBridge</title>
 </head>
 
@@ -76,12 +96,16 @@ $totalOpportunities = (int) ($opportunityStats['total'] ?? 0);
 <p>
     Welcome,
     <strong>
-        <?= htmlspecialchars($user['full_name'], ENT_QUOTES, 'UTF-8') ?>
+        <?= htmlspecialchars(
+            $user['full_name'],
+            ENT_QUOTES,
+            'UTF-8'
+        ) ?>
     </strong>
 </p>
 
 <p>
-    Role: Student
+    <strong>Role:</strong> Student
 </p>
 
 <hr>
@@ -89,19 +113,33 @@ $totalOpportunities = (int) ($opportunityStats['total'] ?? 0);
 <h2>Quick Navigation</h2>
 
 <p>
-    <a href="profile.php">Career Profile</a>
+    <a href="profile.php">
+        Career Profile
+    </a>
 </p>
 
 <p>
-    <a href="skills.php">My Skills</a>
+    <a href="skills.php">
+        My Skills
+    </a>
 </p>
 
 <p>
-    <a href="opportunities.php">Find Opportunities</a>
+    <a href="resume.php">
+        Resume / CV
+    </a>
 </p>
 
 <p>
-    <a href="applications.php">My Applications</a>
+    <a href="opportunities.php">
+        Find Opportunities
+    </a>
+</p>
+
+<p>
+    <a href="applications.php">
+        My Applications
+    </a>
 </p>
 
 <hr>
@@ -138,7 +176,9 @@ $totalOpportunities = (int) ($opportunityStats['total'] ?? 0);
 </p>
 
 <p>
-    <a href="opportunities.php">Browse Available Opportunities</a>
+    <a href="opportunities.php">
+        Browse Available Opportunities
+    </a>
 </p>
 
 <hr>
@@ -175,15 +215,21 @@ $totalOpportunities = (int) ($opportunityStats['total'] ?? 0);
     </p>
 
     <p>
-        <a href="profile.php">Update Profile</a>
+        <a href="profile.php">
+            Update Profile
+        </a>
     </p>
 
 <?php else: ?>
 
-    <p>Student profile not found.</p>
+    <p>
+        Student profile not found.
+    </p>
 
     <p>
-        <a href="profile.php">Create Profile</a>
+        <a href="profile.php">
+            Create Profile
+        </a>
     </p>
 
 <?php endif; ?>
@@ -191,8 +237,11 @@ $totalOpportunities = (int) ($opportunityStats['total'] ?? 0);
 <hr>
 
 <p>
-    <a href="../auth/logout.php">Logout</a>
+    <a href="../auth/logout.php">
+        Logout
+    </a>
 </p>
 
 </body>
+
 </html>

@@ -11,8 +11,12 @@ $userId = (int) $_SESSION['user_id'];
 
 $studentStmt = $pdo->prepare(
     '
-    SELECT student_id, student_id_number, university_name,
-           department, academic_level
+    SELECT
+        student_id,
+        student_id_number,
+        university_name,
+        department,
+        academic_level
     FROM students
     WHERE user_id = ?
     LIMIT 1
@@ -119,6 +123,18 @@ $resumeStmt->execute([$studentId]);
 $resumes = $resumeStmt->fetchAll();
 
 /*
+ * Find the primary resume.
+ */
+$primaryResumeId = null;
+
+foreach ($resumes as $resume) {
+    if ((int) $resume['is_primary'] === 1) {
+        $primaryResumeId = (int) $resume['resume_id'];
+        break;
+    }
+}
+
+/*
  * Handle application submission.
  */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -139,14 +155,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             FILTER_VALIDATE_INT
         );
 
+        /*
+         * If the student did not explicitly select a resume,
+         * automatically use the primary resume.
+         */
+        if ($resumeId === false || $resumeId === null) {
+            $resumeId = $primaryResumeId;
+        }
+
         $coverLetter = trim(
             $_POST['cover_letter'] ?? ''
         );
 
         /*
-         * Validate resume if one was selected.
+         * Validate resume if one is being used.
          */
-        if ($resumeId !== false && $resumeId !== null) {
+        if ($resumeId !== null) {
 
             $resumeCheckStmt = $pdo->prepare(
                 '
@@ -197,7 +221,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $insertStmt->execute([
                     $opportunityId,
                     $studentId,
-                    $resumeId ?: null,
+                    $resumeId,
                     $coverLetter,
                     'submitted'
                 ]);
@@ -246,6 +270,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <a href="opportunities.php">Opportunities</a> |
     <a href="profile.php">Career Profile</a> |
     <a href="skills.php">Skills</a> |
+    <a href="resume.php">Resume</a> |
     <a href="../auth/logout.php">Logout</a>
 </p>
 
@@ -387,14 +412,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     name="resume_id"
                 >
 
-                    <option value="">
-                        Apply without selecting a resume
-                    </option>
-
                     <?php foreach ($resumes as $resume): ?>
 
                         <option
                             value="<?= (int) $resume['resume_id'] ?>"
+                            <?= (
+                                (int) $resume['resume_id']
+                                === $primaryResumeId
+                            ) ? 'selected' : '' ?>
                         >
 
                             <?= htmlspecialchars(
@@ -413,6 +438,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 </select>
 
+                <?php if ($primaryResumeId !== null): ?>
+
+                    <p>
+                        Your primary resume is selected automatically.
+                    </p>
+
+                <?php endif; ?>
+
             </div>
 
             <br>
@@ -425,6 +458,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <p>
                 You can still submit an application with a cover letter.
+            </p>
+
+            <p>
+                <a href="resume.php">
+                    Upload a Resume
+                </a>
             </p>
 
         <?php endif; ?>

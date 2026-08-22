@@ -7,7 +7,7 @@ require_once __DIR__ . '/../config/database.php';
 
 requireRole('student');
 
-$userId = (int) $_SESSION['user_id'];
+$user = currentUser();
 
 /*
  * Get student ID.
@@ -21,7 +21,7 @@ $studentStmt = $pdo->prepare(
     '
 );
 
-$studentStmt->execute([$userId]);
+$studentStmt->execute([$user['id']]);
 
 $student = $studentStmt->fetch();
 
@@ -39,19 +39,28 @@ $stmt = $pdo->prepare(
     SELECT
         a.application_id,
         a.opportunity_id,
+        a.resume_id,
         a.status,
         a.applied_at,
+        a.updated_at,
+
         o.title,
         o.opportunity_type,
         o.location,
         o.deadline,
+
         e.company_name
+
     FROM applications a
+
     INNER JOIN opportunities o
         ON o.opportunity_id = a.opportunity_id
+
     INNER JOIN employers e
         ON e.employer_id = o.employer_id
+
     WHERE a.student_id = ?
+
     ORDER BY a.applied_at DESC
     '
 );
@@ -84,6 +93,7 @@ $applications = $stmt->fetchAll();
     <a href="opportunities.php">Opportunities</a> |
     <a href="profile.php">Career Profile</a> |
     <a href="skills.php">Skills</a> |
+    <a href="resume.php">Resume / CV</a> |
     <a href="../auth/logout.php">Logout</a>
 </p>
 
@@ -145,6 +155,15 @@ $applications = $stmt->fetchAll();
             </p>
 
             <p>
+                <strong>Deadline:</strong>
+                <?= htmlspecialchars(
+                    $application['deadline'],
+                    ENT_QUOTES,
+                    'UTF-8'
+                ) ?>
+            </p>
+
+            <p>
                 <strong>Applied:</strong>
                 <?= htmlspecialchars(
                     $application['applied_at'],
@@ -154,13 +173,45 @@ $applications = $stmt->fetchAll();
             </p>
 
             <p>
-                <strong>Status:</strong>
+                <strong>Last Updated:</strong>
+                <?= htmlspecialchars(
+                    $application['updated_at'],
+                    ENT_QUOTES,
+                    'UTF-8'
+                ) ?>
+            </p>
 
+            <p>
+                <strong>Status:</strong>
                 <?= htmlspecialchars(
                     $application['status'],
                     ENT_QUOTES,
                     'UTF-8'
                 ) ?>
+            </p>
+
+            <?php if (!empty($application['resume_id'])): ?>
+
+                <p>
+                    <strong>Resume:</strong>
+                    Attached
+                </p>
+
+            <?php else: ?>
+
+                <p>
+                    <strong>Resume:</strong>
+                    Not attached
+                </p>
+
+            <?php endif; ?>
+
+            <p>
+                <a
+                    href="application_details.php?id=<?= (int) $application['application_id'] ?>"
+                >
+                    View Application
+                </a>
             </p>
 
             <p>

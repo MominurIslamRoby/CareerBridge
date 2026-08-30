@@ -9,6 +9,12 @@ requireRole('student');
 
 $user = currentUser();
 
+/*
+|--------------------------------------------------------------------------
+| Get Student Profile
+|--------------------------------------------------------------------------
+*/
+
 $stmt = $pdo->prepare(
     'SELECT
         student_id,
@@ -21,9 +27,16 @@ $stmt = $pdo->prepare(
 );
 
 $stmt->execute([$user['id']]);
+
 $student = $stmt->fetch();
 
 $studentId = $student ? (int) $student['student_id'] : 0;
+
+/*
+|--------------------------------------------------------------------------
+| Application Statistics
+|--------------------------------------------------------------------------
+*/
 
 $totalApplications = 0;
 $submittedApplications = 0;
@@ -31,6 +44,7 @@ $shortlistedApplications = 0;
 $selectedApplications = 0;
 
 if ($studentId > 0) {
+
     $stmt = $pdo->prepare(
         'SELECT
             COUNT(*) AS total,
@@ -46,6 +60,7 @@ if ($studentId > 0) {
     $applicationStats = $stmt->fetch();
 
     if ($applicationStats) {
+
         $totalApplications =
             (int) ($applicationStats['total'] ?? 0);
 
@@ -60,6 +75,12 @@ if ($studentId > 0) {
     }
 }
 
+/*
+|--------------------------------------------------------------------------
+| Get Currently Open Opportunities
+|--------------------------------------------------------------------------
+*/
+
 $stmt = $pdo->query(
     'SELECT COUNT(*) AS total
      FROM opportunities
@@ -71,12 +92,35 @@ $opportunityStats = $stmt->fetch();
 $totalOpportunities =
     (int) ($opportunityStats['total'] ?? 0);
 
+/*
+|--------------------------------------------------------------------------
+| Get Unread Notification Count
+|--------------------------------------------------------------------------
+*/
+
+$notificationStmt = $pdo->prepare(
+    'SELECT COUNT(*) AS unread_count
+     FROM notifications
+     WHERE user_id = ?
+       AND is_read = 0'
+);
+
+$notificationStmt->execute([
+    $user['id']
+]);
+
+$notificationResult = $notificationStmt->fetch();
+
+$unreadNotifications =
+    (int) ($notificationResult['unread_count'] ?? 0);
+
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
+
     <meta charset="UTF-8">
 
     <meta
@@ -85,6 +129,7 @@ $totalOpportunities =
     >
 
     <title>Student Dashboard | CareerBridge</title>
+
 </head>
 
 <body>
@@ -142,6 +187,15 @@ $totalOpportunities =
     </a>
 </p>
 
+<p>
+    <a href="notifications.php">
+        Notifications
+        <?php if ($unreadNotifications > 0): ?>
+            (<?= $unreadNotifications ?> New)
+        <?php endif; ?>
+    </a>
+</p>
+
 <hr>
 
 <h2>Application Summary</h2>
@@ -178,6 +232,21 @@ $totalOpportunities =
 <p>
     <a href="opportunities.php">
         Browse Available Opportunities
+    </a>
+</p>
+
+<hr>
+
+<h2>Notifications</h2>
+
+<p>
+    <strong>Unread Notifications:</strong>
+    <?= $unreadNotifications ?>
+</p>
+
+<p>
+    <a href="notifications.php">
+        View All Notifications
     </a>
 </p>
 

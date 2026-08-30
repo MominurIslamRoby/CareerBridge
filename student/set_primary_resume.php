@@ -19,7 +19,7 @@ requireRole('student');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
-    header('Location: skills.php');
+    header('Location: resume.php');
 
     exit;
 }
@@ -35,50 +35,26 @@ $userId = (int) $user['id'];
 
 
 /* =========================================
-   VALIDATE SKILL ID
+   VALIDATE RESUME ID
 ========================================= */
 
-$skillId = filter_input(
+$resumeId = filter_input(
     INPUT_POST,
-    'skill_id',
+    'resume_id',
     FILTER_VALIDATE_INT
 );
 
 
-/* =========================================
-   VALIDATE PROFICIENCY LEVEL
-========================================= */
+if (!$resumeId) {
 
-$proficiencyLevel =
-    $_POST['proficiency_level'] ?? '';
-
-
-$allowedLevels = [
-    'beginner',
-    'intermediate',
-    'advanced',
-    'expert'
-];
-
-
-if (
-    !$skillId ||
-    !is_string($proficiencyLevel) ||
-    !in_array(
-        $proficiencyLevel,
-        $allowedLevels,
-        true
-    )
-) {
-
-    header('Location: skills.php?error=invalid');
+    header('Location: resume.php?error=invalid');
 
     exit;
 }
 
 
 /* =========================================
-   GET CURRENT STUDENT
+   GET STUDENT
 ========================================= */
 
 $studentStmt = $pdo->prepare(
@@ -91,18 +67,16 @@ $studentStmt = $pdo->prepare(
     '
 );
 
-
 $studentStmt->execute([
     $userId
 ]);
-
 
 $student = $studentStmt->fetch();
 
 
 if (!$student) {
 
-    header('Location: skills.php?error=student');
+    header('Location: resume.php?error=student');
 
     exit;
 }
@@ -112,97 +86,108 @@ $studentId = (int) $student['student_id'];
 
 
 /* =========================================
-   VERIFY SKILL EXISTS
+   VERIFY RESUME OWNERSHIP
 ========================================= */
 
-$skillStmt = $pdo->prepare(
+$resumeStmt = $pdo->prepare(
     '
     SELECT
-        skill_id
-    FROM skills
-    WHERE skill_id = ?
+        resume_id,
+        is_primary
+    FROM resumes
+    WHERE resume_id = ?
+      AND student_id = ?
     LIMIT 1
     '
 );
 
-
-$skillStmt->execute([
-    $skillId
+$resumeStmt->execute([
+    $resumeId,
+    $studentId
 ]);
 
+$resume = $resumeStmt->fetch();
 
-if (!$skillStmt->fetch()) {
 
-    header('Location: skills.php?error=skill');
+if (!$resume) {
+
+    header('Location: resume.php?error=notfound');
 
     exit;
 }
 
 
 /* =========================================
-   CHECK IF SKILL ALREADY EXISTS
+   CHECK IF ALREADY PRIMARY
 ========================================= */
 
-$existsStmt = $pdo->prepare(
-    '
-    SELECT
-        1
-    FROM student_skills
-    WHERE student_id = ?
-      AND skill_id = ?
-    LIMIT 1
-    '
-);
+if ((int) $resume['is_primary'] === 1) {
 
-
-$existsStmt->execute([
-    $studentId,
-    $skillId
-]);
-
-
-if ($existsStmt->fetch()) {
-
-    header('Location: skills.php?error=exists');
+    header('Location: resume.php?success=primary');
 
     exit;
 }
 
 
 /* =========================================
-   INSERT SKILL
+   SET PRIMARY RESUME
 ========================================= */
 
 try {
 
-    $insertStmt = $pdo->prepare(
+    $pdo->beginTransaction();
+
+
+    /*
+     * Remove primary status from
+     * all student's resumes.
+     */
+
+    $resetStmt = $pdo->prepare(
         '
-        INSERT INTO student_skills
-        (
-            student_id,
-            skill_id,
-            proficiency_level
-        )
-        VALUES
-        (
-            ?,
-            ?,
-            ?
-        )
+        UPDATE resumes
+        SET is_primary = 0
+        WHERE student_id = ?
         '
     );
 
-
-    $insertStmt->execute([
-        $studentId,
-        $skillId,
-        $proficiencyLevel
+    $resetStmt->execute([
+        $studentId
     ]);
+
+
+    /*
+     * Set selected resume as primary.
+     */
+
+    $primaryStmt = $pdo->prepare(
+        '
+        UPDATE resumes
+        SET is_primary = 1
+        WHERE resume_id = ?
+          AND student_id = ?
+        '
+    );
+
+    $primaryStmt->execute([
+        $resumeId,
+        $studentId
+    ]);
+
+
+    $pdo->commit();
 
 
 } catch (Throwable $e) {
 
-    header('Location: skills.php?error=database');
+
+    if ($pdo->inTransaction()) {
+
+        $pdo->rollBack();
+    }
+
+
+    header('Location: resume.php?error=primary');
 
     exit;
 }
@@ -212,6 +197,6 @@ try {
    SUCCESS REDIRECT
 ========================================= */
 
-header('Location: skills.php?success=1');
+header('Location: resume.php?success=primary');
 
 exit;

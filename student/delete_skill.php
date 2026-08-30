@@ -45,31 +45,7 @@ $skillId = filter_input(
 );
 
 
-/* =========================================
-   VALIDATE PROFICIENCY LEVEL
-========================================= */
-
-$proficiencyLevel =
-    $_POST['proficiency_level'] ?? '';
-
-
-$allowedLevels = [
-    'beginner',
-    'intermediate',
-    'advanced',
-    'expert'
-];
-
-
-if (
-    !$skillId ||
-    !is_string($proficiencyLevel) ||
-    !in_array(
-        $proficiencyLevel,
-        $allowedLevels,
-        true
-    )
-) {
+if (!$skillId) {
 
     header('Location: skills.php?error=invalid');
 
@@ -112,41 +88,13 @@ $studentId = (int) $student['student_id'];
 
 
 /* =========================================
-   VERIFY SKILL EXISTS
+   VERIFY STUDENT OWNS THE SKILL
 ========================================= */
 
-$skillStmt = $pdo->prepare(
+$checkStmt = $pdo->prepare(
     '
     SELECT
         skill_id
-    FROM skills
-    WHERE skill_id = ?
-    LIMIT 1
-    '
-);
-
-
-$skillStmt->execute([
-    $skillId
-]);
-
-
-if (!$skillStmt->fetch()) {
-
-    header('Location: skills.php?error=skill');
-
-    exit;
-}
-
-
-/* =========================================
-   CHECK IF SKILL ALREADY EXISTS
-========================================= */
-
-$existsStmt = $pdo->prepare(
-    '
-    SELECT
-        1
     FROM student_skills
     WHERE student_id = ?
       AND skill_id = ?
@@ -155,54 +103,52 @@ $existsStmt = $pdo->prepare(
 );
 
 
-$existsStmt->execute([
+$checkStmt->execute([
     $studentId,
     $skillId
 ]);
 
 
-if ($existsStmt->fetch()) {
+if (!$checkStmt->fetch()) {
 
-    header('Location: skills.php?error=exists');
+    header('Location: skills.php?error=skill');
 
     exit;
 }
 
 
 /* =========================================
-   INSERT SKILL
+   DELETE STUDENT SKILL
 ========================================= */
 
 try {
 
-    $insertStmt = $pdo->prepare(
+    $deleteStmt = $pdo->prepare(
         '
-        INSERT INTO student_skills
-        (
-            student_id,
-            skill_id,
-            proficiency_level
-        )
-        VALUES
-        (
-            ?,
-            ?,
-            ?
-        )
+        DELETE FROM student_skills
+        WHERE student_id = ?
+          AND skill_id = ?
         '
     );
 
 
-    $insertStmt->execute([
+    $deleteStmt->execute([
         $studentId,
-        $skillId,
-        $proficiencyLevel
+        $skillId
     ]);
+
+
+    if ($deleteStmt->rowCount() !== 1) {
+
+        header('Location: skills.php?error=delete');
+
+        exit;
+    }
 
 
 } catch (Throwable $e) {
 
-    header('Location: skills.php?error=database');
+    header('Location: skills.php?error=delete');
 
     exit;
 }
@@ -212,6 +158,6 @@ try {
    SUCCESS REDIRECT
 ========================================= */
 
-header('Location: skills.php?success=1');
+header('Location: skills.php?deleted=1');
 
 exit;

@@ -7,7 +7,14 @@ require_once __DIR__ . '/../config/database.php';
 
 requireRole('student');
 
-$userId = (int) $_SESSION['user_id'];
+$user = currentUser();
+
+$userId = (int) $user['id'];
+
+
+/* =========================================
+   GET STUDENT INFORMATION
+========================================= */
 
 $studentStmt = $pdo->prepare(
     '
@@ -28,10 +35,18 @@ $studentStmt->execute([$userId]);
 $student = $studentStmt->fetch();
 
 if (!$student) {
+
+    http_response_code(404);
+
     exit('Student profile not found.');
 }
 
 $studentId = (int) $student['student_id'];
+
+
+/* =========================================
+   VALIDATE OPPORTUNITY ID
+========================================= */
 
 $opportunityId = filter_input(
     INPUT_GET,
@@ -40,13 +55,17 @@ $opportunityId = filter_input(
 );
 
 if (!$opportunityId) {
+
     http_response_code(400);
+
     exit('Invalid opportunity ID.');
 }
 
-/*
- * Get opportunity information.
- */
+
+/* =========================================
+   GET OPPORTUNITY INFORMATION
+========================================= */
+
 $opportunityStmt = $pdo->prepare(
     '
     SELECT
@@ -58,11 +77,16 @@ $opportunityStmt = $pdo->prepare(
         o.duration,
         o.deadline,
         o.status,
+
         e.company_name
+
     FROM opportunities o
+
     INNER JOIN employers e
         ON e.employer_id = o.employer_id
+
     WHERE o.opportunity_id = ?
+
     LIMIT 1
     '
 );
@@ -72,25 +96,42 @@ $opportunityStmt->execute([$opportunityId]);
 $opportunity = $opportunityStmt->fetch();
 
 if (!$opportunity) {
+
     http_response_code(404);
+
     exit('Opportunity not found.');
 }
 
+
+/* =========================================
+   INITIALIZE VARIABLES
+========================================= */
+
 $error = '';
+
 $success = '';
 
-/*
- * Check whether the student has already applied.
- */
+$coverLetter = '';
+
+$selectedResumeId = null;
+
+
+/* =========================================
+   CHECK APPLICATION STATUS
+========================================= */
+
 $existingStmt = $pdo->prepare(
     '
     SELECT
         application_id,
         status,
         applied_at
+
     FROM applications
+
     WHERE opportunity_id = ?
       AND student_id = ?
+
     LIMIT 1
     '
 );
@@ -102,9 +143,55 @@ $existingStmt->execute([
 
 $existingApplication = $existingStmt->fetch();
 
-/*
- * Get student's resumes.
- */
+
+/* =========================================
+   FORMAT DEADLINE
+========================================= */
+
+$formattedDeadline = 'Not specified';
+
+if (!empty($opportunity['deadline'])) {
+
+    $deadlineTimestamp = strtotime(
+        $opportunity['deadline']
+    );
+
+    if ($deadlineTimestamp !== false) {
+
+        $formattedDeadline = date(
+            'd M Y',
+            $deadlineTimestamp
+        );
+    }
+}
+
+
+/* =========================================
+   CHECK DEADLINE STATUS
+========================================= */
+
+$isDeadlinePassed = false;
+
+if (!empty($opportunity['deadline'])) {
+
+    $deadlineTimestamp = strtotime(
+        $opportunity['deadline']
+    );
+
+    if (
+        $deadlineTimestamp !== false
+        && $deadlineTimestamp < strtotime('today')
+    ) {
+
+        $isDeadlinePassed = true;
+    }
+}
+
+
+/* =========================================
+   GET STUDENT RESUMES
+========================================= */
+
 $resumeStmt = $pdo->prepare(
     '
     SELECT
@@ -112,9 +199,14 @@ $resumeStmt = $pdo->prepare(
         file_name,
         file_path,
         is_primary
+
     FROM resumes
+
     WHERE student_id = ?
-    ORDER BY is_primary DESC, uploaded_at DESC
+
+    ORDER BY
+        is_primary DESC,
+        uploaded_at DESC
     '
 );
 
@@ -122,135 +214,287 @@ $resumeStmt->execute([$studentId]);
 
 $resumes = $resumeStmt->fetchAll();
 
-/*
- * Find the primary resume.
- */
+
+/* =========================================
+   FIND PRIMARY RESUME
+========================================= */
+
 $primaryResumeId = null;
 
 foreach ($resumes as $resume) {
+
     if ((int) $resume['is_primary'] === 1) {
+
         $primaryResumeId = (int) $resume['resume_id'];
+
         break;
     }
 }
 
-/*
- * Handle application submission.
- */
+
+/* =========================================
+   DEFAULT SELECTED RESUME
+========================================= */
+
+$selectedResumeId = $primaryResumeId;
+
+
+/* =========================================
+   APPLICATION AVAILABILITY
+========================================= */
+
+$canApply =
+    $opportunity['status'] === 'open'
+    && !$isDeadlinePassed
+    && !$existingApplication;
+
+
+/* =========================================
+   HANDLE APPLICATION SUBMISSION
+========================================= */
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    if ($existingApplication) {
 
-        $error = 'You have already applied for this opportunity.';
+    /* -----------------------------------------
+       GET FORM DATA
+    ----------------------------------------- */
 
-    } elseif ($opportunity['status'] !== 'open') {
+    $coverLetter = trim(
+        $_POST['cover_letter'] ?? ''
+    );
 
-        $error = 'This opportunity is no longer accepting applications.';
+    $resumeId = filter_input(
+        INPUT_POST,
+        'resume_id',
+        FILTER_VALIDATE_INT
+    );
+
+
+    /* -----------------------------------------
+       PRESERVE SELECTED RESUME
+    ----------------------------------------- */
+
+    if ($resumeId !== false && $resumeId !== null) {
+
+        $selectedResumeId = (int) $resumeId;
 
     } else {
 
-        $resumeId = filter_input(
-            INPUT_POST,
-            'resume_id',
-            FILTER_VALIDATE_INT
+        $resumeId = $primaryResumeId;
+
+        $selectedResumeId = $primaryResumeId;
+    }
+
+
+    /* -----------------------------------------
+       RE-CHECK APPLICATION STATUS
+       SERVER-SIDE SECURITY
+    ----------------------------------------- */
+
+    $existingStmt->execute([
+        $opportunityId,
+        $studentId
+    ]);
+
+    $existingApplication = $existingStmt->fetch();
+
+
+    /* -----------------------------------------
+       VALIDATE APPLICATION
+    ----------------------------------------- */
+
+    if ($existingApplication) {
+
+        $error =
+            'You have already applied for this opportunity.';
+
+    } elseif ($opportunity['status'] !== 'open') {
+
+        $error =
+            'This opportunity is no longer accepting applications.';
+
+    } elseif ($isDeadlinePassed) {
+
+        $error =
+            'The application deadline for this opportunity has passed.';
+
+    } elseif ($coverLetter === '') {
+
+        $error =
+            'Please enter a cover letter.';
+    }
+
+
+    /* -----------------------------------------
+       VALIDATE SELECTED RESUME
+    ----------------------------------------- */
+
+    if ($error === '' && $resumeId !== null) {
+
+        $resumeCheckStmt = $pdo->prepare(
+            '
+            SELECT
+                resume_id
+
+            FROM resumes
+
+            WHERE resume_id = ?
+              AND student_id = ?
+
+            LIMIT 1
+            '
         );
 
-        /*
-         * If the student did not explicitly select a resume,
-         * automatically use the primary resume.
-         */
-        if ($resumeId === false || $resumeId === null) {
-            $resumeId = $primaryResumeId;
+        $resumeCheckStmt->execute([
+            $resumeId,
+            $studentId
+        ]);
+
+        $validResume = $resumeCheckStmt->fetch();
+
+
+        if (!$validResume) {
+
+            $error =
+                'Invalid resume selected.';
         }
+    }
 
-        $coverLetter = trim(
-            $_POST['cover_letter'] ?? ''
-        );
 
-        /*
-         * Validate resume if one is being used.
-         */
-        if ($resumeId !== null) {
+    /* -----------------------------------------
+       SUBMIT APPLICATION
+       + CREATE NOTIFICATION
+    ----------------------------------------- */
 
-            $resumeCheckStmt = $pdo->prepare(
+    if ($error === '') {
+
+        try {
+
+            $pdo->beginTransaction();
+
+
+            /* -----------------------------------------
+               INSERT APPLICATION
+            ----------------------------------------- */
+
+            $insertStmt = $pdo->prepare(
                 '
-                SELECT resume_id
-                FROM resumes
-                WHERE resume_id = ?
-                  AND student_id = ?
-                LIMIT 1
+                INSERT INTO applications
+                    (
+                        opportunity_id,
+                        student_id,
+                        resume_id,
+                        cover_letter,
+                        status
+                    )
+
+                VALUES
+                    (?, ?, ?, ?, ?)
                 '
             );
 
-            $resumeCheckStmt->execute([
+            $insertStmt->execute([
+                $opportunityId,
+                $studentId,
                 $resumeId,
+                $coverLetter,
+                'submitted'
+            ]);
+
+
+            /* -----------------------------------------
+               CREATE NOTIFICATION
+            ----------------------------------------- */
+
+            $notificationStmt = $pdo->prepare(
+                '
+                INSERT INTO notifications
+                    (
+                        user_id,
+                        title,
+                        message,
+                        type
+                    )
+
+                VALUES
+                    (?, ?, ?, ?)
+                '
+            );
+
+
+            $notificationTitle =
+                'Application Submitted';
+
+
+            $notificationMessage =
+                'Your application for "' .
+                $opportunity['title'] .
+                '" at ' .
+                $opportunity['company_name'] .
+                ' has been submitted successfully.';
+
+
+            $notificationStmt->execute([
+                $userId,
+                $notificationTitle,
+                $notificationMessage,
+                'application'
+            ]);
+
+
+            /* -----------------------------------------
+               COMMIT TRANSACTION
+            ----------------------------------------- */
+
+            $pdo->commit();
+
+
+            /* -----------------------------------------
+               SUCCESS MESSAGE
+            ----------------------------------------- */
+
+            $success =
+                'Application submitted successfully.';
+
+
+            /* -----------------------------------------
+               REFRESH APPLICATION INFORMATION
+            ----------------------------------------- */
+
+            $existingStmt->execute([
+                $opportunityId,
                 $studentId
             ]);
 
-            if (!$resumeCheckStmt->fetch()) {
-                $error = 'Invalid resume selected.';
+            $existingApplication =
+                $existingStmt->fetch();
+
+
+            $canApply = false;
+
+
+        } catch (PDOException $e) {
+
+            if ($pdo->inTransaction()) {
+
+                $pdo->rollBack();
             }
-        }
 
-        /*
-         * Require a cover letter.
-         */
-        if ($error === '' && $coverLetter === '') {
-            $error = 'Please enter a cover letter.';
-        }
 
-        if ($error === '') {
-
-            try {
-
-                $insertStmt = $pdo->prepare(
-                    '
-                    INSERT INTO applications
-                        (
-                            opportunity_id,
-                            student_id,
-                            resume_id,
-                            cover_letter,
-                            status
-                        )
-                    VALUES
-                        (?, ?, ?, ?, ?)
-                    '
-                );
-
-                $insertStmt->execute([
-                    $opportunityId,
-                    $studentId,
-                    $resumeId,
-                    $coverLetter,
-                    'submitted'
-                ]);
-
-                $success = 'Application submitted successfully.';
-
-                /*
-                 * Refresh existing application information.
-                 */
-                $existingStmt->execute([
-                    $opportunityId,
-                    $studentId
-                ]);
-
-                $existingApplication = $existingStmt->fetch();
-
-            } catch (PDOException $e) {
-
-                $error = 'Application could not be submitted. Please try again.';
-            }
+            $error =
+                'Application could not be submitted. Please try again.';
         }
     }
 }
+
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
+
     <meta charset="UTF-8">
 
     <meta
@@ -258,254 +502,1053 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         content="width=device-width, initial-scale=1.0"
     >
 
-    <title>Apply | CareerBridge</title>
+    <title>
+        Apply for <?= htmlspecialchars(
+            $opportunity['title'],
+            ENT_QUOTES,
+            'UTF-8'
+        ) ?> | CareerBridge
+    </title>
+
+
+    <!-- MAIN STYLESHEET -->
+
+    <link
+        rel="stylesheet"
+        href="../assets/css/style.css"
+    >
+
+
+    <!-- FONT AWESOME -->
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+        referrerpolicy="no-referrer"
+    >
+
 </head>
+
 
 <body>
 
-<h1>Apply for Opportunity</h1>
 
-<p>
-    <a href="dashboard.php">Dashboard</a> |
-    <a href="opportunities.php">Opportunities</a> |
-    <a href="profile.php">Career Profile</a> |
-    <a href="skills.php">Skills</a> |
-    <a href="resume.php">Resume</a> |
-    <a href="../auth/logout.php">Logout</a>
-</p>
+<div class="app-layout">
 
-<hr>
 
-<h2>
-    <?= htmlspecialchars(
-        $opportunity['title'],
-        ENT_QUOTES,
-        'UTF-8'
-    ) ?>
-</h2>
+    <!-- =====================================
+         SIDEBAR
+    ====================================== -->
 
-<p>
-    <strong>Company:</strong>
-    <?= htmlspecialchars(
-        $opportunity['company_name'],
-        ENT_QUOTES,
-        'UTF-8'
-    ) ?>
-</p>
+    <aside class="sidebar">
 
-<p>
-    <strong>Type:</strong>
-    <?= htmlspecialchars(
-        $opportunity['opportunity_type'],
-        ENT_QUOTES,
-        'UTF-8'
-    ) ?>
-</p>
 
-<p>
-    <strong>Location:</strong>
-    <?= htmlspecialchars(
-        $opportunity['location'] ?? 'Not specified',
-        ENT_QUOTES,
-        'UTF-8'
-    ) ?>
-</p>
+        <!-- BRAND -->
 
-<p>
-    <strong>Duration:</strong>
-    <?= htmlspecialchars(
-        $opportunity['duration'] ?? 'Not specified',
-        ENT_QUOTES,
-        'UTF-8'
-    ) ?>
-</p>
+        <div class="sidebar-brand">
 
-<p>
-    <strong>Deadline:</strong>
-    <?= htmlspecialchars(
-        $opportunity['deadline'],
-        ENT_QUOTES,
-        'UTF-8'
-    ) ?>
-</p>
 
-<hr>
+            <div class="brand-logo">
+                CB
+            </div>
 
-<?php if ($error !== ''): ?>
-
-    <p>
-        <strong>
-            <?= htmlspecialchars(
-                $error,
-                ENT_QUOTES,
-                'UTF-8'
-            ) ?>
-        </strong>
-    </p>
-
-<?php endif; ?>
-
-<?php if ($success !== ''): ?>
-
-    <p>
-        <strong>
-            <?= htmlspecialchars(
-                $success,
-                ENT_QUOTES,
-                'UTF-8'
-            ) ?>
-        </strong>
-    </p>
-
-<?php endif; ?>
-
-<?php if ($existingApplication): ?>
-
-    <h3>Application Submitted</h3>
-
-    <p>
-        You have already applied for this opportunity.
-    </p>
-
-    <p>
-        <strong>Application Status:</strong>
-        <?= htmlspecialchars(
-            $existingApplication['status'],
-            ENT_QUOTES,
-            'UTF-8'
-        ) ?>
-    </p>
-
-    <p>
-        <strong>Applied At:</strong>
-        <?= htmlspecialchars(
-            $existingApplication['applied_at'],
-            ENT_QUOTES,
-            'UTF-8'
-        ) ?>
-    </p>
-
-<?php elseif ($opportunity['status'] !== 'open'): ?>
-
-    <p>
-        This opportunity is not currently accepting applications.
-    </p>
-
-<?php else: ?>
-
-    <h3>Application Form</h3>
-
-    <form method="POST" action="">
-
-        <?php if ($resumes): ?>
 
             <div>
 
-                <label for="resume_id">
-                    Select Resume
-                </label>
+                <h2>
+                    CareerBridge
+                </h2>
 
-                <br>
-
-                <select
-                    id="resume_id"
-                    name="resume_id"
-                >
-
-                    <?php foreach ($resumes as $resume): ?>
-
-                        <option
-                            value="<?= (int) $resume['resume_id'] ?>"
-                            <?= (
-                                (int) $resume['resume_id']
-                                === $primaryResumeId
-                            ) ? 'selected' : '' ?>
-                        >
-
-                            <?= htmlspecialchars(
-                                $resume['file_name'],
-                                ENT_QUOTES,
-                                'UTF-8'
-                            ) ?>
-
-                            <?php if ((int) $resume['is_primary'] === 1): ?>
-                                (Primary)
-                            <?php endif; ?>
-
-                        </option>
-
-                    <?php endforeach; ?>
-
-                </select>
-
-                <?php if ($primaryResumeId !== null): ?>
-
-                    <p>
-                        Your primary resume is selected automatically.
-                    </p>
-
-                <?php endif; ?>
+                <span>
+                    Student Portal
+                </span>
 
             </div>
 
-            <br>
-
-        <?php else: ?>
-
-            <p>
-                You currently have no uploaded resume.
-            </p>
-
-            <p>
-                You can still submit an application with a cover letter.
-            </p>
-
-            <p>
-                <a href="resume.php">
-                    Upload a Resume
-                </a>
-            </p>
-
-        <?php endif; ?>
-
-        <div>
-
-            <label for="cover_letter">
-                Cover Letter
-            </label>
-
-            <br>
-
-            <textarea
-                id="cover_letter"
-                name="cover_letter"
-                rows="12"
-                cols="70"
-                required
-                placeholder="Write your cover letter here..."
-            ></textarea>
 
         </div>
 
-        <br>
 
-        <button type="submit">
-            Submit Application
-        </button>
+        <div class="sidebar-divider"></div>
 
-    </form>
 
-<?php endif; ?>
+        <p class="menu-label">
+            MAIN MENU
+        </p>
 
-<hr>
 
-<p>
-    <a
-        href="opportunity_details.php?id=<?= (int) $opportunity['opportunity_id'] ?>"
-    >
-        ← Back to Opportunity
-    </a>
-</p>
+        <!-- NAVIGATION -->
+
+        <nav class="sidebar-nav">
+
+
+            <a href="dashboard.php">
+
+                <span>
+                    <i class="fa-solid fa-house"></i>
+                </span>
+
+                Dashboard
+
+            </a>
+
+
+            <a href="profile.php">
+
+                <span>
+                    <i class="fa-solid fa-user"></i>
+                </span>
+
+                Career Profile
+
+            </a>
+
+
+            <a href="skills.php">
+
+                <span>
+                    <i class="fa-solid fa-bolt"></i>
+                </span>
+
+                My Skills
+
+            </a>
+
+
+            <a href="resume.php">
+
+                <span>
+                    <i class="fa-solid fa-file-lines"></i>
+                </span>
+
+                Resume / CV
+
+            </a>
+
+
+            <a
+                href="opportunities.php"
+                class="active"
+            >
+
+                <span>
+                    <i class="fa-solid fa-briefcase"></i>
+                </span>
+
+                Opportunities
+
+            </a>
+
+
+            <a href="applications.php">
+
+                <span>
+                    <i class="fa-solid fa-file-circle-check"></i>
+                </span>
+
+                My Applications
+
+            </a>
+
+
+            <a href="notifications.php">
+
+                <span>
+                    <i class="fa-solid fa-bell"></i>
+                </span>
+
+                Notifications
+
+            </a>
+
+
+        </nav>
+
+
+        <!-- LOGOUT -->
+
+        <div class="sidebar-bottom">
+
+            <a
+                href="../auth/logout.php"
+                class="logout-link"
+            >
+
+                <i class="fa-solid fa-right-from-bracket"></i>
+
+                Logout
+
+            </a>
+
+        </div>
+
+
+    </aside>
+
+
+
+    <!-- =====================================
+         MAIN CONTENT
+    ====================================== -->
+
+    <main class="main-content">
+
+
+        <!-- =====================================
+             PAGE HEADER
+        ====================================== -->
+
+        <div class="page-header">
+
+
+            <div>
+
+                <p class="breadcrumb">
+                    STUDENT PORTAL / OPPORTUNITIES / APPLY
+                </p>
+
+
+                <h1>
+                    Apply for Opportunity
+                </h1>
+
+
+                <p class="page-subtitle">
+
+                    Complete your application and take the next step
+                    toward your professional career.
+
+                </p>
+
+            </div>
+
+
+            <!-- USER CARD -->
+
+            <div class="user-card">
+
+
+                <div class="user-avatar">
+
+                    <?= strtoupper(
+                        substr(
+                            $user['full_name'],
+                            0,
+                            1
+                        )
+                    ) ?>
+
+                </div>
+
+
+                <div>
+
+                    <strong>
+
+                        <?= htmlspecialchars(
+                            $user['full_name'],
+                            ENT_QUOTES,
+                            'UTF-8'
+                        ) ?>
+
+                    </strong>
+
+                    <span>
+                        Student
+                    </span>
+
+                </div>
+
+
+            </div>
+
+
+        </div>
+
+
+
+        <!-- =====================================
+             OPPORTUNITY SUMMARY
+        ====================================== -->
+
+        <section class="content-card">
+
+
+            <div class="section-heading">
+
+
+                <div>
+
+                    <p class="section-label">
+                        OPPORTUNITY DETAILS
+                    </p>
+
+
+                    <h2>
+
+                        <?= htmlspecialchars(
+                            $opportunity['title'],
+                            ENT_QUOTES,
+                            'UTF-8'
+                        ) ?>
+
+                    </h2>
+
+
+                    <p>
+
+                        <?= htmlspecialchars(
+                            $opportunity['company_name'],
+                            ENT_QUOTES,
+                            'UTF-8'
+                        ) ?>
+
+                    </p>
+
+                </div>
+
+
+                <div class="section-icon">
+
+                    <i class="fa-solid fa-briefcase"></i>
+
+                </div>
+
+
+            </div>
+
+
+
+            <div class="application-meta opportunity-meta">
+
+
+                <div>
+
+                    <span class="meta-label">
+                        TYPE
+                    </span>
+
+                    <strong>
+
+                        <i class="fa-solid fa-briefcase"></i>
+
+                        <?= htmlspecialchars(
+                            ucfirst(
+                                $opportunity['opportunity_type']
+                            ),
+                            ENT_QUOTES,
+                            'UTF-8'
+                        ) ?>
+
+                    </strong>
+
+                </div>
+
+
+
+                <div>
+
+                    <span class="meta-label">
+                        LOCATION
+                    </span>
+
+                    <strong>
+
+                        <i class="fa-solid fa-location-dot"></i>
+
+                        <?= htmlspecialchars(
+                            $opportunity['location']
+                                ?? 'Not specified',
+                            ENT_QUOTES,
+                            'UTF-8'
+                        ) ?>
+
+                    </strong>
+
+                </div>
+
+
+
+                <div>
+
+                    <span class="meta-label">
+                        DURATION
+                    </span>
+
+                    <strong>
+
+                        <i class="fa-solid fa-clock"></i>
+
+                        <?= htmlspecialchars(
+                            $opportunity['duration']
+                                ?? 'Not specified',
+                            ENT_QUOTES,
+                            'UTF-8'
+                        ) ?>
+
+                    </strong>
+
+                </div>
+
+
+
+                <div>
+
+                    <span class="meta-label">
+                        DEADLINE
+                    </span>
+
+                    <strong>
+
+                        <i class="fa-regular fa-calendar"></i>
+
+                        <?= htmlspecialchars(
+                            $formattedDeadline,
+                            ENT_QUOTES,
+                            'UTF-8'
+                        ) ?>
+
+                    </strong>
+
+                </div>
+
+
+            </div>
+
+
+        </section>
+
+
+
+        <!-- =====================================
+             ERROR MESSAGE
+        ====================================== -->
+
+        <?php if ($error !== ''): ?>
+
+
+            <div class="alert alert-error">
+
+                <strong>
+
+                    <i class="fa-solid fa-circle-exclamation"></i>
+
+                    Error
+
+                </strong>
+
+
+                <span>
+
+                    <?= htmlspecialchars(
+                        $error,
+                        ENT_QUOTES,
+                        'UTF-8'
+                    ) ?>
+
+                </span>
+
+            </div>
+
+
+        <?php endif; ?>
+
+
+
+        <!-- =====================================
+             SUCCESS MESSAGE
+        ====================================== -->
+
+        <?php if ($success !== ''): ?>
+
+
+            <div class="alert alert-success">
+
+                <strong>
+
+                    <i class="fa-solid fa-circle-check"></i>
+
+                    Success
+
+                </strong>
+
+
+                <span>
+
+                    <?= htmlspecialchars(
+                        $success,
+                        ENT_QUOTES,
+                        'UTF-8'
+                    ) ?>
+
+                </span>
+
+            </div>
+
+
+        <?php endif; ?>
+
+
+
+        <!-- =====================================
+             ALREADY APPLIED
+        ====================================== -->
+
+        <?php if ($existingApplication): ?>
+
+
+            <section class="content-card application-complete-card">
+
+
+                <div class="empty-state">
+
+
+                    <div class="empty-icon">
+
+                        <i class="fa-solid fa-circle-check"></i>
+
+                    </div>
+
+
+                    <h2>
+                        Application Submitted
+                    </h2>
+
+
+                    <p>
+
+                        You have already submitted an application
+                        for this opportunity.
+
+                    </p>
+
+
+                    <div class="application-status-info">
+
+
+                        <div>
+
+                            <span>
+                                APPLICATION STATUS
+                            </span>
+
+                            <strong>
+
+                                <?= htmlspecialchars(
+                                    ucfirst(
+                                        $existingApplication['status']
+                                    ),
+                                    ENT_QUOTES,
+                                    'UTF-8'
+                                ) ?>
+
+                            </strong>
+
+                        </div>
+
+
+
+                        <div>
+
+                            <span>
+                                APPLIED ON
+                            </span>
+
+                            <strong>
+
+                                <?= htmlspecialchars(
+                                    date(
+                                        'd M Y',
+                                        strtotime(
+                                            $existingApplication['applied_at']
+                                        )
+                                    ),
+                                    ENT_QUOTES,
+                                    'UTF-8'
+                                ) ?>
+
+                            </strong>
+
+                        </div>
+
+
+                    </div>
+
+
+
+                    <div class="form-actions">
+
+
+                        <a
+                            href="applications.php"
+                            class="btn btn-primary"
+                        >
+
+                            View My Applications
+
+                            <i class="fa-solid fa-arrow-right"></i>
+
+                        </a>
+
+
+                        <a
+                            href="opportunities.php"
+                            class="btn btn-secondary"
+                        >
+
+                            <i class="fa-solid fa-briefcase"></i>
+
+                            Browse Opportunities
+
+                        </a>
+
+
+                    </div>
+
+
+                </div>
+
+
+            </section>
+
+
+
+        <!-- =====================================
+             DEADLINE PASSED
+        ====================================== -->
+
+        <?php elseif ($isDeadlinePassed): ?>
+
+
+            <section class="content-card">
+
+
+                <div class="empty-state">
+
+
+                    <div class="empty-icon">
+
+                        <i class="fa-solid fa-clock"></i>
+
+                    </div>
+
+
+                    <h2>
+                        Application Deadline Passed
+                    </h2>
+
+
+                    <p>
+
+                        The application deadline for this opportunity
+                        has already passed.
+
+                    </p>
+
+
+                    <a
+                        href="opportunities.php"
+                        class="btn btn-primary"
+                    >
+
+                        Browse Other Opportunities
+
+                        <i class="fa-solid fa-arrow-right"></i>
+
+                    </a>
+
+
+                </div>
+
+
+            </section>
+
+
+
+        <!-- =====================================
+             OPPORTUNITY CLOSED
+        ====================================== -->
+
+        <?php elseif ($opportunity['status'] !== 'open'): ?>
+
+
+            <section class="content-card">
+
+
+                <div class="empty-state">
+
+
+                    <div class="empty-icon">
+
+                        <i class="fa-solid fa-lock"></i>
+
+                    </div>
+
+
+                    <h2>
+                        Applications Closed
+                    </h2>
+
+
+                    <p>
+
+                        This opportunity is no longer accepting applications.
+
+                    </p>
+
+
+                    <a
+                        href="opportunities.php"
+                        class="btn btn-primary"
+                    >
+
+                        Browse Other Opportunities
+
+                        <i class="fa-solid fa-arrow-right"></i>
+
+                    </a>
+
+
+                </div>
+
+
+            </section>
+
+
+
+        <!-- =====================================
+             APPLICATION FORM
+        ====================================== -->
+
+        <?php else: ?>
+
+
+            <form
+                method="POST"
+                action=""
+                class="profile-form"
+            >
+
+
+                <!-- =====================================
+                     RESUME SECTION
+                ====================================== -->
+
+                <section class="content-card">
+
+
+                    <div class="section-heading">
+
+
+                        <div>
+
+                            <p class="section-label">
+                                APPLICATION DOCUMENT
+                            </p>
+
+                            <h2>
+                                Select Resume
+                            </h2>
+
+                            <p>
+
+                                Choose the resume or CV you want
+                                to submit with your application.
+
+                            </p>
+
+                        </div>
+
+
+                        <div class="section-icon">
+
+                            <i class="fa-solid fa-file-lines"></i>
+
+                        </div>
+
+
+                    </div>
+
+
+
+                    <?php if ($resumes): ?>
+
+
+                        <div class="form-group form-full">
+
+
+                            <label for="resume_id">
+
+                                Resume / CV
+
+                            </label>
+
+
+                            <select
+                                id="resume_id"
+                                name="resume_id"
+                            >
+
+
+                                <?php foreach ($resumes as $resume): ?>
+
+
+                                    <option
+
+                                        value="<?= (int) $resume['resume_id'] ?>"
+
+                                        <?= (
+                                            (int) $resume['resume_id']
+                                            === $selectedResumeId
+                                        )
+                                            ? 'selected'
+                                            : ''
+                                        ?>
+
+                                    >
+
+                                        <?= htmlspecialchars(
+                                            $resume['file_name'],
+                                            ENT_QUOTES,
+                                            'UTF-8'
+                                        ) ?>
+
+
+                                        <?php if (
+                                            (int) $resume['is_primary'] === 1
+                                        ): ?>
+
+                                            - Primary Resume
+
+                                        <?php endif; ?>
+
+
+                                    </option>
+
+
+                                <?php endforeach; ?>
+
+
+                            </select>
+
+
+
+                            <?php if ($primaryResumeId !== null): ?>
+
+
+                                <p class="form-help">
+
+                                    Your primary resume is selected automatically.
+
+                                </p>
+
+
+                            <?php endif; ?>
+
+
+                        </div>
+
+
+                    <?php else: ?>
+
+
+                        <div class="empty-state resume-empty">
+
+
+                            <div class="empty-icon">
+
+                                <i class="fa-solid fa-folder-open"></i>
+
+                            </div>
+
+
+                            <h3>
+                                No Resume Uploaded
+                            </h3>
+
+
+                            <p>
+
+                                You can still apply using a cover letter,
+                                but adding a resume can strengthen your application.
+
+                            </p>
+
+
+                            <a
+                                href="resume.php"
+                                class="btn btn-secondary"
+                            >
+
+                                <i class="fa-solid fa-upload"></i>
+
+                                Upload Resume
+
+                            </a>
+
+
+                        </div>
+
+
+                    <?php endif; ?>
+
+
+                </section>
+
+
+
+                <!-- =====================================
+                     COVER LETTER
+                ====================================== -->
+
+                <section class="content-card">
+
+
+                    <div class="section-heading">
+
+
+                        <div>
+
+                            <p class="section-label">
+                                APPLICATION MESSAGE
+                            </p>
+
+                            <h2>
+                                Cover Letter
+                            </h2>
+
+                            <p>
+
+                                Explain why you are a strong candidate
+                                for this opportunity.
+
+                            </p>
+
+                        </div>
+
+
+                        <div class="section-icon">
+
+                            <i class="fa-solid fa-envelope"></i>
+
+                        </div>
+
+
+                    </div>
+
+
+
+                    <div class="form-group form-full">
+
+
+                        <label for="cover_letter">
+
+                            Write Your Cover Letter
+
+                        </label>
+
+
+                        <textarea
+                            id="cover_letter"
+                            name="cover_letter"
+                            rows="12"
+                            required
+                            placeholder="Introduce yourself, explain your interest in this opportunity, and highlight relevant skills and experience..."
+                        ><?= htmlspecialchars(
+                            $coverLetter,
+                            ENT_QUOTES,
+                            'UTF-8'
+                        ) ?></textarea>
+
+
+                        <p class="form-help">
+
+                            Explain your interest in the role and highlight
+                            relevant skills, qualifications, and experience.
+
+                        </p>
+
+
+                    </div>
+
+
+                </section>
+
+
+
+                <!-- =====================================
+                     FORM ACTIONS
+                ====================================== -->
+
+                <div class="form-actions">
+
+
+                    <a
+                        href="opportunity_details.php?id=<?= (int) $opportunity['opportunity_id'] ?>"
+                        class="btn btn-secondary"
+                    >
+
+                        <i class="fa-solid fa-arrow-left"></i>
+
+                        Back to Opportunity
+
+                    </a>
+
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary"
+                    >
+
+                        Submit Application
+
+                        <i class="fa-solid fa-paper-plane"></i>
+
+                    </button>
+
+
+                </div>
+
+
+            </form>
+
+
+        <?php endif; ?>
+
+
+
+        <!-- =====================================
+             FOOTER
+        ====================================== -->
+
+        <footer class="page-footer">
+
+            <div class="footer-content">
+
+                <p>
+
+                    &copy; <?= date('Y') ?>
+                    <strong>CareerBridge</strong>.
+                    All rights reserved.
+
+                </p>
+
+                <p class="footer-text">
+
+                    The Ultimate Career Management Platform
+
+                </p>
+
+            </div>
+
+        </footer>
+
+
+    </main>
+
+
+</div>
+
 
 </body>
 

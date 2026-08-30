@@ -17,7 +17,15 @@ $options = [
 ];
 
 try {
-    $pdo = new PDO($dsn, $username, $password, $options);
+
+    $pdo = new PDO(
+        $dsn,
+        $username,
+        $password,
+        $options
+    );
+
 } catch (PDOException $e) {
-    exit('Database connection failed.');
+
+    exit('Database connection failed: ' . $e->getMessage());
 }

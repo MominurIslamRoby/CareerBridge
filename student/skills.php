@@ -315,11 +315,18 @@ function getSkillLevelIcon(
     <aside class="sidebar">
 
 
+        <!-- BRAND -->
+
         <div class="sidebar-brand">
 
 
             <div class="brand-logo">
-                CB
+
+                <img
+                    src="../assets/images/CB Logo Transparent.png"
+                    alt="CareerBridge Logo"
+                >
+
             </div>
 
 

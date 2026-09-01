@@ -5,11 +5,45 @@ declare(strict_types=1);
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../config/database.php';
 
+
+/* =========================================
+   AUTHORIZATION
+========================================= */
+
 requireRole('student');
 
 $user = currentUser();
 
 $userId = (int) $user['id'];
+
+
+/* =========================================
+   HELPER FUNCTION
+========================================= */
+
+function e(?string $value): string
+{
+    return htmlspecialchars(
+        $value ?? '',
+        ENT_QUOTES,
+        'UTF-8'
+    );
+}
+
+
+/* =========================================
+   USER DISPLAY DATA
+========================================= */
+
+$userName = $user['full_name'] ?? 'Student';
+
+$userInitial = strtoupper(
+    substr(
+        $userName,
+        0,
+        1
+    )
+);
 
 
 /* =========================================
@@ -96,20 +130,25 @@ $statsStmt->execute([$studentId]);
 $stats = $statsStmt->fetch();
 
 
-$totalInterviews =
-    (int) ($stats['total_interviews'] ?? 0);
+$totalInterviews = (int) (
+    $stats['total_interviews'] ?? 0
+);
 
-$scheduledCount =
-    (int) ($stats['scheduled_count'] ?? 0);
+$scheduledCount = (int) (
+    $stats['scheduled_count'] ?? 0
+);
 
-$rescheduledCount =
-    (int) ($stats['rescheduled_count'] ?? 0);
+$rescheduledCount = (int) (
+    $stats['rescheduled_count'] ?? 0
+);
 
-$completedCount =
-    (int) ($stats['completed_count'] ?? 0);
+$completedCount = (int) (
+    $stats['completed_count'] ?? 0
+);
 
-$cancelledCount =
-    (int) ($stats['cancelled_count'] ?? 0);
+$cancelledCount = (int) (
+    $stats['cancelled_count'] ?? 0
+);
 
 
 /* =========================================
@@ -213,19 +252,19 @@ function getInterviewStatusIcon(
     switch ($status) {
 
         case 'scheduled':
-            return '📅';
+            return 'fa-solid fa-calendar-check';
 
         case 'rescheduled':
-            return '🔄';
+            return 'fa-solid fa-rotate';
 
         case 'completed':
-            return '✓';
+            return 'fa-solid fa-circle-check';
 
         case 'cancelled':
-            return '✕';
+            return 'fa-solid fa-circle-xmark';
 
         default:
-            return '📋';
+            return 'fa-solid fa-calendar';
     }
 }
 
@@ -257,14 +296,12 @@ function formatInterviewDate(
 ): string {
 
     if (empty($date)) {
-
         return 'Not scheduled';
     }
 
     $timestamp = strtotime($date);
 
     if ($timestamp === false) {
-
         return 'Not scheduled';
     }
 
@@ -286,13 +323,35 @@ function formatInterviewMode(
     switch ($mode) {
 
         case 'online':
-            return '💻 Online';
+            return 'Online';
 
         case 'offline':
-            return '📍 Offline';
+            return 'Offline';
 
         default:
             return ucfirst($mode);
+    }
+}
+
+
+/* =========================================
+   INTERVIEW MODE ICON
+========================================= */
+
+function getInterviewModeIcon(
+    string $mode
+): string {
+
+    switch ($mode) {
+
+        case 'online':
+            return 'fa-solid fa-video';
+
+        case 'offline':
+            return 'fa-solid fa-location-dot';
+
+        default:
+            return 'fa-solid fa-briefcase';
     }
 }
 
@@ -317,14 +376,12 @@ function isUpcomingInterview(
             true
         )
     ) {
-
         return false;
     }
 
     $timestamp = strtotime($date);
 
     if ($timestamp === false) {
-
         return false;
     }
 
@@ -334,6 +391,7 @@ function isUpcomingInterview(
 ?>
 
 <!DOCTYPE html>
+
 <html lang="en">
 
 <head>
@@ -349,10 +407,22 @@ function isUpcomingInterview(
         My Interviews | CareerBridge
     </title>
 
+
+    <!-- FONT AWESOME -->
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    >
+
+
+    <!-- MAIN STYLESHEET -->
+
     <link
         rel="stylesheet"
         href="../assets/css/style.css"
     >
+
 
 </head>
 
@@ -370,11 +440,18 @@ function isUpcomingInterview(
     <aside class="sidebar">
 
 
+        <!-- BRAND -->
+
         <div class="sidebar-brand">
 
 
             <div class="brand-logo">
-                CB
+
+                <img
+                    src="../assets/images/CB Logo Transparent.png"
+                    alt="CareerBridge Logo"
+                >
+
             </div>
 
 
@@ -402,12 +479,16 @@ function isUpcomingInterview(
         </p>
 
 
+        <!-- NAVIGATION -->
+
         <nav class="sidebar-nav">
 
 
             <a href="dashboard.php">
 
-                <span>⌂</span>
+                <span>
+                    <i class="fa-solid fa-house"></i>
+                </span>
 
                 Dashboard
 
@@ -416,7 +497,9 @@ function isUpcomingInterview(
 
             <a href="profile.php">
 
-                <span>♟</span>
+                <span>
+                    <i class="fa-solid fa-user"></i>
+                </span>
 
                 Career Profile
 
@@ -425,7 +508,9 @@ function isUpcomingInterview(
 
             <a href="skills.php">
 
-                <span>⚡</span>
+                <span>
+                    <i class="fa-solid fa-bolt"></i>
+                </span>
 
                 My Skills
 
@@ -434,7 +519,9 @@ function isUpcomingInterview(
 
             <a href="resume.php">
 
-                <span>▣</span>
+                <span>
+                    <i class="fa-solid fa-file-lines"></i>
+                </span>
 
                 Resume / CV
 
@@ -443,7 +530,9 @@ function isUpcomingInterview(
 
             <a href="opportunities.php">
 
-                <span>💼</span>
+                <span>
+                    <i class="fa-solid fa-briefcase"></i>
+                </span>
 
                 Opportunities
 
@@ -452,7 +541,9 @@ function isUpcomingInterview(
 
             <a href="applications.php">
 
-                <span>▤</span>
+                <span>
+                    <i class="fa-solid fa-clipboard-list"></i>
+                </span>
 
                 My Applications
 
@@ -464,7 +555,9 @@ function isUpcomingInterview(
                 class="active"
             >
 
-                <span>🎯</span>
+                <span>
+                    <i class="fa-solid fa-calendar-check"></i>
+                </span>
 
                 My Interviews
 
@@ -473,7 +566,9 @@ function isUpcomingInterview(
 
             <a href="notifications.php">
 
-                <span>🔔</span>
+                <span>
+                    <i class="fa-solid fa-bell"></i>
+                </span>
 
                 Notifications
 
@@ -483,18 +578,20 @@ function isUpcomingInterview(
         </nav>
 
 
-        <div class="sidebar-bottom">
+        <!-- LOGOUT -->
 
+        <div class="sidebar-bottom">
 
             <a
                 href="../auth/logout.php"
                 class="logout-link"
             >
 
-                ↪ Logout
+                <i class="fa-solid fa-right-from-bracket"></i>
+
+                Logout
 
             </a>
-
 
         </div>
 
@@ -520,9 +617,7 @@ function isUpcomingInterview(
             <div>
 
                 <p class="breadcrumb">
-
                     STUDENT PORTAL / MY INTERVIEWS
-
                 </p>
 
 
@@ -532,14 +627,10 @@ function isUpcomingInterview(
 
 
                 <p class="page-subtitle">
-
                     View and manage your scheduled interview opportunities.
-
                 </p>
 
-
             </div>
-
 
 
             <!-- USER CARD -->
@@ -549,13 +640,7 @@ function isUpcomingInterview(
 
                 <div class="user-avatar">
 
-                    <?= strtoupper(
-                        substr(
-                            $user['full_name'],
-                            0,
-                            1
-                        )
-                    ) ?>
+                    <?= e($userInitial) ?>
 
                 </div>
 
@@ -563,20 +648,12 @@ function isUpcomingInterview(
                 <div>
 
                     <strong>
-
-                        <?= htmlspecialchars(
-                            $user['full_name'],
-                            ENT_QUOTES,
-                            'UTF-8'
-                        ) ?>
-
+                        <?= e($userName) ?>
                     </strong>
 
 
                     <span>
-
                         Student
-
                     </span>
 
                 </div>
@@ -600,10 +677,9 @@ function isUpcomingInterview(
 
             <div class="stat-card">
 
-
                 <div class="stat-icon">
 
-                    🎯
+                    <i class="fa-solid fa-calendar-days"></i>
 
                 </div>
 
@@ -614,15 +690,11 @@ function isUpcomingInterview(
                         Total Interviews
                     </p>
 
-
                     <h2>
-
                         <?= $totalInterviews ?>
-
                     </h2>
 
                 </div>
-
 
             </div>
 
@@ -632,10 +704,9 @@ function isUpcomingInterview(
 
             <div class="stat-card">
 
-
                 <div class="stat-icon">
 
-                    📅
+                    <i class="fa-solid fa-calendar-check"></i>
 
                 </div>
 
@@ -646,15 +717,11 @@ function isUpcomingInterview(
                         Scheduled
                     </p>
 
-
                     <h2>
-
                         <?= $scheduledCount ?>
-
                     </h2>
 
                 </div>
-
 
             </div>
 
@@ -664,10 +731,9 @@ function isUpcomingInterview(
 
             <div class="stat-card">
 
-
                 <div class="stat-icon">
 
-                    🔄
+                    <i class="fa-solid fa-rotate"></i>
 
                 </div>
 
@@ -678,15 +744,11 @@ function isUpcomingInterview(
                         Rescheduled
                     </p>
 
-
                     <h2>
-
                         <?= $rescheduledCount ?>
-
                     </h2>
 
                 </div>
-
 
             </div>
 
@@ -696,10 +758,9 @@ function isUpcomingInterview(
 
             <div class="stat-card">
 
-
                 <div class="stat-icon">
 
-                    ✓
+                    <i class="fa-solid fa-circle-check"></i>
 
                 </div>
 
@@ -710,47 +771,11 @@ function isUpcomingInterview(
                         Completed
                     </p>
 
-
                     <h2>
-
                         <?= $completedCount ?>
-
                     </h2>
 
                 </div>
-
-
-            </div>
-
-
-
-            <!-- CANCELLED -->
-
-            <div class="stat-card">
-
-
-                <div class="stat-icon">
-
-                    ✕
-
-                </div>
-
-
-                <div>
-
-                    <p>
-                        Cancelled
-                    </p>
-
-
-                    <h2>
-
-                        <?= $cancelledCount ?>
-
-                    </h2>
-
-                </div>
-
 
             </div>
 
@@ -760,7 +785,7 @@ function isUpcomingInterview(
 
 
         <!-- =====================================
-             INTERVIEW STATUS OVERVIEW
+             INTERVIEW OVERVIEW
         ====================================== -->
 
         <section class="content-card">
@@ -772,38 +797,30 @@ function isUpcomingInterview(
                 <div>
 
                     <p class="section-label">
-
                         INTERVIEW OVERVIEW
-
                     </p>
 
 
                     <h2>
-
                         Interview Progress
-
                     </h2>
 
 
                     <p>
-
-                        Track the status of your recruitment interviews.
-
+                        Track the current status of your recruitment interviews.
                     </p>
-
 
                 </div>
 
 
                 <div class="section-icon">
 
-                    📊
+                    <i class="fa-solid fa-chart-column"></i>
 
                 </div>
 
 
             </div>
-
 
 
             <div class="application-meta">
@@ -812,73 +829,50 @@ function isUpcomingInterview(
                 <div>
 
                     <span class="meta-label">
-
                         SCHEDULED
-
                     </span>
 
-
                     <strong>
-
                         <?= $scheduledCount ?>
-
                     </strong>
 
                 </div>
 
 
-
                 <div>
 
                     <span class="meta-label">
-
                         RESCHEDULED
-
                     </span>
 
-
                     <strong>
-
                         <?= $rescheduledCount ?>
-
                     </strong>
 
                 </div>
 
 
-
                 <div>
 
                     <span class="meta-label">
-
                         COMPLETED
-
                     </span>
 
-
                     <strong>
-
                         <?= $completedCount ?>
-
                     </strong>
 
                 </div>
 
 
-
                 <div>
 
                     <span class="meta-label">
-
                         CANCELLED
-
                     </span>
 
-
                     <strong>
-
                         <?= $cancelledCount ?>
-
                     </strong>
 
                 </div>
@@ -904,32 +898,25 @@ function isUpcomingInterview(
                 <div>
 
                     <p class="section-label">
-
                         INTERVIEW SCHEDULE
-
                     </p>
 
 
                     <h2>
-
                         Your Interviews
-
                     </h2>
 
 
                     <p>
-
                         Review interview dates, meeting details, and instructions.
-
                     </p>
-
 
                 </div>
 
 
                 <div class="section-icon">
 
-                    🎯
+                    <i class="fa-solid fa-calendar-days"></i>
 
                 </div>
 
@@ -938,9 +925,7 @@ function isUpcomingInterview(
 
 
 
-            <!-- =====================================
-                 EMPTY STATE
-            ====================================== -->
+            <!-- EMPTY STATE -->
 
             <?php if (!$interviews): ?>
 
@@ -950,23 +935,19 @@ function isUpcomingInterview(
 
                     <div class="empty-icon">
 
-                        🎯
+                        <i class="fa-solid fa-calendar-xmark"></i>
 
                     </div>
 
 
                     <h3>
-
                         No Interviews Scheduled
-
                     </h3>
 
 
                     <p>
-
                         When an employer selects you for an interview,
                         the interview details will appear here.
-
                     </p>
 
 
@@ -975,7 +956,9 @@ function isUpcomingInterview(
                         class="btn btn-primary"
                     >
 
-                        View My Applications →
+                        <i class="fa-solid fa-clipboard-list"></i>
+
+                        View My Applications
 
                     </a>
 
@@ -984,9 +967,7 @@ function isUpcomingInterview(
 
 
 
-            <!-- =====================================
-                 INTERVIEW LIST
-            ====================================== -->
+            <!-- INTERVIEW LIST -->
 
             <?php else: ?>
 
@@ -999,11 +980,22 @@ function isUpcomingInterview(
 
                         <?php
 
-                        $isUpcoming =
-                            isUpcomingInterview(
-                                $interview['interview_date'],
-                                $interview['interview_status']
-                            );
+                        $isUpcoming = isUpcomingInterview(
+                            $interview['interview_date'],
+                            $interview['interview_status']
+                        );
+
+                        $statusClass = getInterviewStatusClass(
+                            $interview['interview_status']
+                        );
+
+                        $statusIcon = getInterviewStatusIcon(
+                            $interview['interview_status']
+                        );
+
+                        $modeIcon = getInterviewModeIcon(
+                            $interview['interview_mode']
+                        );
 
                         ?>
 
@@ -1015,7 +1007,7 @@ function isUpcomingInterview(
 
                             <div class="application-avatar">
 
-                                🎯
+                                <i class="fa-solid fa-calendar-check"></i>
 
                             </div>
 
@@ -1026,20 +1018,17 @@ function isUpcomingInterview(
                             <div class="application-content">
 
 
-                                <!-- TOP -->
+                                <!-- TOP SECTION -->
 
                                 <div class="application-top">
 
 
                                     <div>
 
-
                                         <h3>
 
-                                            <?= htmlspecialchars(
-                                                $interview['opportunity_title'],
-                                                ENT_QUOTES,
-                                                'UTF-8'
+                                            <?= e(
+                                                $interview['opportunity_title']
                                             ) ?>
 
                                         </h3>
@@ -1047,11 +1036,12 @@ function isUpcomingInterview(
 
                                         <p class="application-opportunity">
 
-                                            <?= htmlspecialchars(
-                                                $interview['company_name'],
-                                                ENT_QUOTES,
-                                                'UTF-8'
+                                            <i class="fa-solid fa-building"></i>
+
+                                            <?= e(
+                                                $interview['company_name']
                                             ) ?>
+
 
                                             <?php if (
                                                 !empty(
@@ -1059,12 +1049,12 @@ function isUpcomingInterview(
                                                 )
                                             ): ?>
 
-                                                —
+                                                <span>
+                                                    ·
+                                                </span>
 
-                                                <?= htmlspecialchars(
-                                                    $interview['industry'],
-                                                    ENT_QUOTES,
-                                                    'UTF-8'
+                                                <?= e(
+                                                    $interview['industry']
                                                 ) ?>
 
                                             <?php endif; ?>
@@ -1080,25 +1070,19 @@ function isUpcomingInterview(
                                     <!-- STATUS -->
 
                                     <span
-                                        class="status-badge <?= htmlspecialchars(
-                                            getInterviewStatusClass(
-                                                $interview['interview_status']
-                                            ),
-                                            ENT_QUOTES,
-                                            'UTF-8'
+                                        class="status-badge <?= e(
+                                            $statusClass
                                         ) ?>"
                                     >
 
-                                        <?= getInterviewStatusIcon(
-                                            $interview['interview_status']
-                                        ) ?>
+                                        <i class="<?= e(
+                                            $statusIcon
+                                        ) ?>"></i>
 
-                                        <?= htmlspecialchars(
+                                        <?= e(
                                             formatInterviewStatus(
                                                 $interview['interview_status']
-                                            ),
-                                            ENT_QUOTES,
-                                            'UTF-8'
+                                            )
                                         ) ?>
 
                                     </span>
@@ -1115,7 +1099,9 @@ function isUpcomingInterview(
 
                                     <div class="form-help">
 
-                                        ⏰ Upcoming Interview
+                                        <i class="fa-solid fa-clock"></i>
+
+                                        Upcoming Interview
 
                                     </div>
 
@@ -1133,8 +1119,9 @@ function isUpcomingInterview(
 
                                     <div>
 
-
                                         <span class="meta-label">
+
+                                            <i class="fa-solid fa-calendar-days"></i>
 
                                             DATE & TIME
 
@@ -1143,12 +1130,10 @@ function isUpcomingInterview(
 
                                         <strong>
 
-                                            <?= htmlspecialchars(
+                                            <?= e(
                                                 formatInterviewDate(
                                                     $interview['interview_date']
-                                                ),
-                                                ENT_QUOTES,
-                                                'UTF-8'
+                                                )
                                             ) ?>
 
                                         </strong>
@@ -1162,8 +1147,11 @@ function isUpcomingInterview(
 
                                     <div>
 
-
                                         <span class="meta-label">
+
+                                            <i class="<?= e(
+                                                $modeIcon
+                                            ) ?>"></i>
 
                                             MODE
 
@@ -1172,12 +1160,10 @@ function isUpcomingInterview(
 
                                         <strong>
 
-                                            <?= htmlspecialchars(
+                                            <?= e(
                                                 formatInterviewMode(
                                                     $interview['interview_mode']
-                                                ),
-                                                ENT_QUOTES,
-                                                'UTF-8'
+                                                )
                                             ) ?>
 
                                         </strong>
@@ -1191,8 +1177,9 @@ function isUpcomingInterview(
 
                                     <div>
 
-
                                         <span class="meta-label">
+
+                                            <i class="fa-solid fa-briefcase"></i>
 
                                             OPPORTUNITY
 
@@ -1201,12 +1188,10 @@ function isUpcomingInterview(
 
                                         <strong>
 
-                                            <?= htmlspecialchars(
+                                            <?= e(
                                                 ucfirst(
                                                     $interview['opportunity_type']
-                                                ),
-                                                ENT_QUOTES,
-                                                'UTF-8'
+                                                )
                                             ) ?>
 
                                         </strong>
@@ -1220,8 +1205,9 @@ function isUpcomingInterview(
 
                                     <div>
 
-
                                         <span class="meta-label">
+
+                                            <i class="fa-solid fa-file-circle-check"></i>
 
                                             APPLICATION
 
@@ -1230,16 +1216,14 @@ function isUpcomingInterview(
 
                                         <strong>
 
-                                            <?= htmlspecialchars(
+                                            <?= e(
                                                 ucwords(
                                                     str_replace(
                                                         '_',
                                                         ' ',
                                                         $interview['application_status']
                                                     )
-                                                ),
-                                                ENT_QUOTES,
-                                                'UTF-8'
+                                                )
                                             ) ?>
 
                                         </strong>
@@ -1252,9 +1236,7 @@ function isUpcomingInterview(
 
 
 
-                                <!-- =====================================
-                                     ONLINE INTERVIEW
-                                ====================================== -->
+                                <!-- ONLINE INTERVIEW -->
 
                                 <?php if (
                                     $interview['interview_mode'] === 'online'
@@ -1271,15 +1253,15 @@ function isUpcomingInterview(
 
                                             <span class="meta-label">
 
+                                                <i class="fa-solid fa-video"></i>
+
                                                 ONLINE MEETING
 
                                             </span>
 
 
                                             <strong>
-
                                                 Meeting link provided
-
                                             </strong>
 
 
@@ -1299,17 +1281,19 @@ function isUpcomingInterview(
 
 
                                             <a
-                                                href="<?= htmlspecialchars(
-                                                    $interview['meeting_link'],
-                                                    ENT_QUOTES,
-                                                    'UTF-8'
+                                                href="<?= e(
+                                                    $interview['meeting_link']
                                                 ) ?>"
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 class="btn btn-primary"
                                             >
 
-                                                Join Interview →
+                                                <i class="fa-solid fa-video"></i>
+
+                                                Join Interview
+
+                                                <i class="fa-solid fa-arrow-up-right-from-square"></i>
 
                                             </a>
 
@@ -1324,9 +1308,7 @@ function isUpcomingInterview(
 
 
 
-                                <!-- =====================================
-                                     OFFLINE INTERVIEW
-                                ====================================== -->
+                                <!-- OFFLINE INTERVIEW -->
 
                                 <?php if (
                                     $interview['interview_mode'] === 'offline'
@@ -1343,6 +1325,8 @@ function isUpcomingInterview(
 
                                             <span class="meta-label">
 
+                                                <i class="fa-solid fa-location-dot"></i>
+
                                                 INTERVIEW LOCATION
 
                                             </span>
@@ -1350,10 +1334,8 @@ function isUpcomingInterview(
 
                                             <strong>
 
-                                                <?= htmlspecialchars(
-                                                    $interview['interview_location'],
-                                                    ENT_QUOTES,
-                                                    'UTF-8'
+                                                <?= e(
+                                                    $interview['interview_location']
                                                 ) ?>
 
                                             </strong>
@@ -1369,9 +1351,7 @@ function isUpcomingInterview(
 
 
 
-                                <!-- =====================================
-                                     ADDITIONAL NOTES
-                                ====================================== -->
+                                <!-- ADDITIONAL NOTES -->
 
                                 <?php if (
                                     !empty(
@@ -1385,6 +1365,8 @@ function isUpcomingInterview(
 
                                         <span class="meta-label">
 
+                                            <i class="fa-solid fa-note-sticky"></i>
+
                                             ADDITIONAL INSTRUCTIONS
 
                                         </span>
@@ -1393,10 +1375,8 @@ function isUpcomingInterview(
                                         <p>
 
                                             <?= nl2br(
-                                                htmlspecialchars(
-                                                    $interview['notes'],
-                                                    ENT_QUOTES,
-                                                    'UTF-8'
+                                                e(
+                                                    $interview['notes']
                                                 )
                                             ) ?>
 
@@ -1410,9 +1390,7 @@ function isUpcomingInterview(
 
 
 
-                                <!-- =====================================
-                                     INTERVIEW OUTCOME
-                                ====================================== -->
+                                <!-- INTERVIEW OUTCOME -->
 
                                 <?php if (
                                     !empty(
@@ -1426,6 +1404,8 @@ function isUpcomingInterview(
 
                                         <span class="meta-label">
 
+                                            <i class="fa-solid fa-flag-checkered"></i>
+
                                             INTERVIEW OUTCOME
 
                                         </span>
@@ -1434,10 +1414,8 @@ function isUpcomingInterview(
                                         <p>
 
                                             <?= nl2br(
-                                                htmlspecialchars(
-                                                    $interview['outcome'],
-                                                    ENT_QUOTES,
-                                                    'UTF-8'
+                                                e(
+                                                    $interview['outcome']
                                                 )
                                             ) ?>
 
@@ -1475,7 +1453,8 @@ function isUpcomingInterview(
 
         <footer class="page-footer">
 
-            © <?= date('Y') ?>
+            &copy; <?= date('Y') ?>
+
             CareerBridge — University Career Management Platform
 
         </footer>

@@ -115,6 +115,13 @@ img {
     box-shadow: 0 8px 20px rgba(79, 70, 229, 0.35);
 }
 
+.brand-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
 .sidebar-brand h2 {
     margin: 0;
     font-size: 22px;

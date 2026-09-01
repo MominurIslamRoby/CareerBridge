@@ -173,28 +173,32 @@ if (isset($_GET['error'])) {
 
         <!-- BRAND -->
 
-        <div class="sidebar-brand">
+<div class="sidebar-brand">
+
+    <div class="brand-logo">
+
+        <img
+            src="../assets/images/CB%20Logo%20Transparent.png"
+            alt="CareerBridge Logo"
+        >
+
+    </div>
 
 
-            <div class="brand-logo">
-                <i class="fa-solid fa-bridge"></i>
-            </div>
+    <div>
+
+        <h2>
+            CareerBridge
+        </h2>
+
+        <span>
+            Student Portal
+        </span>
+
+    </div>
 
 
-            <div>
-
-                <h2>
-                    CareerBridge
-                </h2>
-
-                <span>
-                    Student Portal
-                </span>
-
-            </div>
-
-
-        </div>
+</div>
 
 
         <div class="sidebar-divider"></div>

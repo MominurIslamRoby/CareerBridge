@@ -78,7 +78,6 @@ $sql = '
     WHERE o.status = "open"
 ';
 
-
 $params = [];
 
 
@@ -166,17 +165,15 @@ $jobCount = 0;
 
 foreach ($opportunities as $opportunity) {
 
-    if (
-        strtolower($opportunity['opportunity_type'])
-        === 'internship'
-    ) {
+    $opportunityType = strtolower(
+        (string) $opportunity['opportunity_type']
+    );
+
+    if ($opportunityType === 'internship') {
         $internshipCount++;
     }
 
-    if (
-        strtolower($opportunity['opportunity_type'])
-        === 'job'
-    ) {
+    if ($opportunityType === 'job') {
         $jobCount++;
     }
 }
@@ -200,6 +197,21 @@ $filtersActive = (
 $opportunityText = $totalOpportunities === 1
     ? 'opportunity'
     : 'opportunities';
+
+
+/* =========================================
+   USER DISPLAY DATA
+========================================= */
+
+$userName = $user['full_name'] ?? 'Student';
+
+$userInitial = strtoupper(
+    substr(
+        $userName,
+        0,
+        1
+    )
+);
 
 ?>
 
@@ -249,6 +261,34 @@ $opportunityText = $totalOpportunities === 1
 
         .opportunities-page {
             width: 100%;
+        }
+
+
+        /* -------------------------------------
+           CAREERBRIDGE LOGO
+        ------------------------------------- */
+
+        .sidebar-brand .brand-logo {
+            width: 48px;
+            height: 48px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+
+        .sidebar-brand .brand-logo img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: contain;
+        }
+
+
+        .sidebar-brand .brand-text {
+            min-width: 0;
         }
 
 
@@ -544,6 +584,7 @@ $opportunityText = $totalOpportunities === 1
         .opportunities-page .opportunity-empty-state {
             text-align: center;
             padding: 60px 25px;
+            margin-bottom: 35px;
         }
 
 
@@ -615,6 +656,12 @@ $opportunityText = $totalOpportunities === 1
                 grid-template-columns: 1fr;
             }
 
+
+            .sidebar-brand .brand-logo {
+                width: 42px;
+                height: 42px;
+            }
+
         }
 
     </style>
@@ -635,14 +682,22 @@ $opportunityText = $totalOpportunities === 1
     <aside class="sidebar">
 
 
+        <!-- BRAND -->
+
         <div class="sidebar-brand">
 
+
             <div class="brand-logo">
-                CB
+
+                <img
+                    src="../assets/images/CB Logo Transparent.png"
+                    alt="CareerBridge Logo"
+                >
+
             </div>
 
 
-            <div>
+            <div class="brand-text">
 
                 <h2>
                     CareerBridge
@@ -653,6 +708,7 @@ $opportunityText = $totalOpportunities === 1
                 </span>
 
             </div>
+
 
         </div>
 
@@ -670,44 +726,44 @@ $opportunityText = $totalOpportunities === 1
 
             <a href="dashboard.php">
 
-                <i class="fa-solid fa-table-columns"></i>
-
                 <span>
-                    Dashboard
+                    <i class="fa-solid fa-house"></i>
                 </span>
+
+                Dashboard
 
             </a>
 
 
             <a href="profile.php">
 
-                <i class="fa-solid fa-user"></i>
-
                 <span>
-                    Career Profile
+                    <i class="fa-solid fa-user"></i>
                 </span>
+
+                Career Profile
 
             </a>
 
 
             <a href="skills.php">
 
-                <i class="fa-solid fa-lightbulb"></i>
-
                 <span>
-                    My Skills
+                    <i class="fa-solid fa-bolt"></i>
                 </span>
+
+                My Skills
 
             </a>
 
 
             <a href="resume.php">
 
-                <i class="fa-solid fa-file-lines"></i>
-
                 <span>
-                    Resume / CV
+                    <i class="fa-solid fa-file-lines"></i>
                 </span>
+
+                Resume / CV
 
             </a>
 
@@ -717,44 +773,44 @@ $opportunityText = $totalOpportunities === 1
                 class="active"
             >
 
-                <i class="fa-solid fa-briefcase"></i>
-
                 <span>
-                    Opportunities
+                    <i class="fa-solid fa-briefcase"></i>
                 </span>
+
+                Opportunities
 
             </a>
 
 
             <a href="applications.php">
 
-                <i class="fa-solid fa-folder-open"></i>
-
                 <span>
-                    My Applications
+                    <i class="fa-solid fa-clipboard-list"></i>
                 </span>
+
+                My Applications
 
             </a>
 
 
             <a href="interviews.php">
 
-                <i class="fa-solid fa-calendar-check"></i>
-
                 <span>
-                    My Interviews
+                    <i class="fa-solid fa-calendar-check"></i>
                 </span>
+
+                My Interviews
 
             </a>
 
 
             <a href="notifications.php">
 
-                <i class="fa-solid fa-bell"></i>
-
                 <span>
-                    Notifications
+                    <i class="fa-solid fa-bell"></i>
                 </span>
+
+                Notifications
 
             </a>
 
@@ -764,6 +820,7 @@ $opportunityText = $totalOpportunities === 1
 
         <div class="sidebar-bottom">
 
+
             <a
                 href="../auth/logout.php"
                 class="logout-link"
@@ -771,11 +828,10 @@ $opportunityText = $totalOpportunities === 1
 
                 <i class="fa-solid fa-right-from-bracket"></i>
 
-                <span>
-                    Logout
-                </span>
+                Logout
 
             </a>
+
 
         </div>
 
@@ -821,15 +877,7 @@ $opportunityText = $totalOpportunities === 1
 
                 <div class="user-avatar">
 
-                    <?= e(
-                        strtoupper(
-                            substr(
-                                $user['full_name'] ?? 'S',
-                                0,
-                                1
-                            )
-                        )
-                    ) ?>
+                    <?= e($userInitial) ?>
 
                 </div>
 
@@ -837,12 +885,7 @@ $opportunityText = $totalOpportunities === 1
                 <div>
 
                     <strong>
-
-                        <?= e(
-                            $user['full_name']
-                            ?? 'Student'
-                        ) ?>
-
+                        <?= e($userName) ?>
                     </strong>
 
 
@@ -1267,13 +1310,49 @@ $opportunityText = $totalOpportunities === 1
 
                     <?php
 
-                    $opportunityType =
-                        strtolower(
-                            $opportunity['opportunity_type']
-                        );
+                    $opportunityType = strtolower(
+                        (string) $opportunity['opportunity_type']
+                    );
 
                     $isInternship =
                         $opportunityType === 'internship';
+
+
+                    $description =
+                        (string) (
+                            $opportunity['description']
+                            ?? ''
+                        );
+
+
+                    if (mb_strlen($description) > 150) {
+
+                        $description =
+                            mb_substr(
+                                $description,
+                                0,
+                                150
+                            ) . '...';
+                    }
+
+
+                    $deadlineText = 'Not specified';
+
+
+                    if (!empty($opportunity['deadline'])) {
+
+                        $timestamp = strtotime(
+                            $opportunity['deadline']
+                        );
+
+                        if ($timestamp !== false) {
+
+                            $deadlineText = date(
+                                'd M Y',
+                                $timestamp
+                            );
+                        }
+                    }
 
                     ?>
 
@@ -1307,7 +1386,7 @@ $opportunityText = $totalOpportunities === 1
 
                                 <?= e(
                                     ucfirst(
-                                        $opportunity['opportunity_type']
+                                        $opportunityType
                                     )
                                 ) ?>
 
@@ -1346,51 +1425,14 @@ $opportunityText = $totalOpportunities === 1
 
                         <!-- DESCRIPTION -->
 
-                        <?php if (
-                            !empty(
-                                $opportunity['description']
-                            )
-                        ): ?>
+                        <p class="opportunity-description">
 
+                            <?= $description !== ''
+                                ? e($description)
+                                : 'No description provided for this opportunity.'
+                            ?>
 
-                            <p class="opportunity-description">
-
-                                <?php
-
-                                $description =
-                                    $opportunity['description'];
-
-                                if (
-                                    mb_strlen($description)
-                                    > 150
-                                ) {
-                                    $description =
-                                        mb_substr(
-                                            $description,
-                                            0,
-                                            150
-                                        ) . '...';
-                                }
-
-                                ?>
-
-                                <?= e($description) ?>
-
-                            </p>
-
-
-                        <?php else: ?>
-
-
-                            <p class="opportunity-description">
-
-                                No description provided for this
-                                opportunity.
-
-                            </p>
-
-
-                        <?php endif; ?>
+                        </p>
 
 
 
@@ -1446,27 +1488,7 @@ $opportunityText = $totalOpportunities === 1
                                 <span>
 
                                     Deadline:
-
-                                    <?php if (
-                                        !empty(
-                                            $opportunity['deadline']
-                                        )
-                                    ): ?>
-
-                                        <?= e(
-                                            date(
-                                                'd M Y',
-                                                strtotime(
-                                                    $opportunity['deadline']
-                                                )
-                                            )
-                                        ) ?>
-
-                                    <?php else: ?>
-
-                                        Not specified
-
-                                    <?php endif; ?>
+                                    <?= e($deadlineText) ?>
 
                                 </span>
 

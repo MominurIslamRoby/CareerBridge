@@ -5,16 +5,56 @@ declare(strict_types=1);
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../config/database.php';
 
+
+/*
+|--------------------------------------------------------------------------
+| AUTHORIZATION
+|--------------------------------------------------------------------------
+*/
+
 requireRole('student');
 
 $user = currentUser();
 
-$userId = (int) $user['id'];
+$userId = (int) ($user['id'] ?? 0);
 
 
 /*
 |--------------------------------------------------------------------------
-| Get Student Profile
+| HELPER FUNCTION
+|--------------------------------------------------------------------------
+*/
+
+function e(?string $value): string
+{
+    return htmlspecialchars(
+        $value ?? '',
+        ENT_QUOTES,
+        'UTF-8'
+    );
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| USER DISPLAY DATA
+|--------------------------------------------------------------------------
+*/
+
+$userName = $user['full_name'] ?? 'Student';
+
+$userInitial = strtoupper(
+    substr(
+        $userName,
+        0,
+        1
+    )
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| GET STUDENT PROFILE
 |--------------------------------------------------------------------------
 */
 
@@ -44,7 +84,7 @@ $studentId = $student
 
 /*
 |--------------------------------------------------------------------------
-| Default Statistics
+| DEFAULT STATISTICS
 |--------------------------------------------------------------------------
 */
 
@@ -58,7 +98,7 @@ $totalOpportunities = 0;
 
 /*
 |--------------------------------------------------------------------------
-| Application Statistics
+| APPLICATION STATISTICS
 |--------------------------------------------------------------------------
 */
 
@@ -130,7 +170,7 @@ if ($studentId > 0) {
 
 /*
 |--------------------------------------------------------------------------
-| Opportunity Statistics
+| OPPORTUNITY STATISTICS
 |--------------------------------------------------------------------------
 */
 
@@ -153,6 +193,124 @@ if ($opportunityStats) {
     );
 }
 
+
+/*
+|--------------------------------------------------------------------------
+| GET RECENT NOTIFICATIONS
+|--------------------------------------------------------------------------
+*/
+
+$notificationStmt = $pdo->prepare(
+    '
+    SELECT
+        notification_id,
+        title,
+        message,
+        type,
+        is_read,
+        created_at
+    FROM notifications
+    WHERE user_id = ?
+    ORDER BY created_at DESC
+    LIMIT 4
+    '
+);
+
+$notificationStmt->execute([
+    $userId
+]);
+
+$recentNotifications = $notificationStmt->fetchAll();
+
+
+/*
+|--------------------------------------------------------------------------
+| UNREAD NOTIFICATION COUNT
+|--------------------------------------------------------------------------
+*/
+
+$unreadNotificationStmt = $pdo->prepare(
+    '
+    SELECT COUNT(*) AS unread_count
+    FROM notifications
+    WHERE user_id = ?
+      AND is_read = 0
+    '
+);
+
+$unreadNotificationStmt->execute([
+    $userId
+]);
+
+$unreadNotificationData =
+    $unreadNotificationStmt->fetch();
+
+$unreadNotifications = (int) (
+    $unreadNotificationData['unread_count']
+    ?? 0
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| NOTIFICATION ICON HELPER
+|--------------------------------------------------------------------------
+*/
+
+function getNotificationIconClass(string $type): string
+{
+    switch (strtolower($type)) {
+
+        case 'application':
+            return 'fa-solid fa-file-circle-check';
+
+        case 'opportunity':
+            return 'fa-solid fa-briefcase';
+
+        case 'interview':
+            return 'fa-solid fa-calendar-check';
+
+        case 'selected':
+            return 'fa-solid fa-circle-check';
+
+        case 'rejected':
+            return 'fa-solid fa-circle-xmark';
+
+        case 'system':
+        default:
+            return 'fa-solid fa-bell';
+    }
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| FORMAT NOTIFICATION DATE
+|--------------------------------------------------------------------------
+*/
+
+function formatNotificationDate(string $date): string
+{
+    $timestamp = strtotime($date);
+
+    if ($timestamp === false) {
+        return 'Recently';
+    }
+
+    $today = strtotime('today');
+    $yesterday = strtotime('yesterday');
+
+    if ($timestamp >= $today) {
+        return 'Today, ' . date('h:i A', $timestamp);
+    }
+
+    if ($timestamp >= $yesterday) {
+        return 'Yesterday, ' . date('h:i A', $timestamp);
+    }
+
+    return date('d M Y', $timestamp);
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -173,7 +331,7 @@ if ($opportunityStats) {
     </title>
 
 
-    <!-- Font Awesome -->
+    <!-- FONT AWESOME -->
 
     <link
         rel="stylesheet"
@@ -181,12 +339,442 @@ if ($opportunityStats) {
     >
 
 
-    <!-- Main Stylesheet -->
+    <!-- MAIN STYLESHEET -->
 
     <link
         rel="stylesheet"
         href="../assets/css/style.css"
     >
+
+
+    <!-- DASHBOARD SPECIFIC STYLES -->
+
+    <style>
+
+        /* =====================================
+           DASHBOARD PAGE
+        ====================================== */
+
+        .dashboard-page {
+            width: 100%;
+        }
+
+
+        /* =====================================
+           STATISTICS
+        ====================================== */
+
+        .dashboard-page .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 18px;
+            margin-bottom: 30px;
+        }
+
+
+        .dashboard-page .stat-card {
+            min-height: 130px;
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+
+
+        .dashboard-page .stat-card h2 {
+            margin: 8px 0 0;
+            font-size: 26px;
+        }
+
+
+        .dashboard-page .stat-card p {
+            margin: 0;
+        }
+
+
+        /* =====================================
+           DASHBOARD GRID
+        ====================================== */
+
+        .dashboard-page .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 24px;
+            align-items: start;
+        }
+
+
+        .dashboard-page .dashboard-column {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+
+        /* =====================================
+           CONTENT CARDS
+        ====================================== */
+
+        .dashboard-page .content-card {
+            margin-bottom: 0;
+        }
+
+
+        .dashboard-page .section-heading {
+            margin-bottom: 24px;
+        }
+
+
+        /* =====================================
+           APPLICATION META
+        ====================================== */
+
+        .dashboard-page .application-meta {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+            margin-top: 5px;
+        }
+
+
+        .dashboard-page .application-meta > div {
+            padding: 18px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            background: #f8fafc;
+        }
+
+
+        .dashboard-page .application-meta .meta-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.6px;
+        }
+
+
+        .dashboard-page .application-meta strong {
+            display: block;
+            color: #1e293b;
+            font-size: 19px;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+
+
+        /* =====================================
+           FORM ACTIONS
+        ====================================== */
+
+        .dashboard-page .form-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+
+        .dashboard-page .form-actions .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+
+        /* =====================================
+           QUICK ACCESS
+        ====================================== */
+
+        .dashboard-page .quick-access-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
+        }
+
+
+        .dashboard-page .quick-access-card {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 18px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            background: #f8fafc;
+            text-decoration: none;
+            color: #1e293b;
+            transition:
+                transform 0.2s ease,
+                box-shadow 0.2s ease,
+                border-color 0.2s ease;
+        }
+
+
+        .dashboard-page .quick-access-card:hover {
+            transform: translateY(-3px);
+            border-color: #c7d2fe;
+            box-shadow:
+                0 8px 20px rgba(15, 23, 42, 0.08);
+        }
+
+
+        .dashboard-page .quick-access-icon {
+            width: 42px;
+            height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 14px;
+            border-radius: 10px;
+            background: #eef2ff;
+            color: #4f46e5;
+            font-size: 17px;
+        }
+
+
+        .dashboard-page .quick-access-card strong {
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+
+        .dashboard-page .quick-access-card span {
+            color: #64748b;
+            font-size: 12px;
+        }
+
+
+        /* =====================================
+           NOTIFICATIONS
+        ====================================== */
+
+        .dashboard-page .dashboard-notification-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+
+        .dashboard-page .dashboard-notification-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            padding: 15px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            background: #ffffff;
+        }
+
+
+        .dashboard-page .dashboard-notification-item.unread {
+            background: #f8faff;
+            border-color: #c7d2fe;
+        }
+
+
+        .dashboard-page .dashboard-notification-icon {
+            width: 42px;
+            height: 42px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            background: #eef2ff;
+            color: #4f46e5;
+        }
+
+
+        .dashboard-page .dashboard-notification-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+
+        .dashboard-page .dashboard-notification-content h4 {
+            margin: 0 0 6px;
+            color: #1e293b;
+            font-size: 14px;
+        }
+
+
+        .dashboard-page .dashboard-notification-content p {
+            margin: 0 0 7px;
+            color: #64748b;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+
+        .dashboard-page .dashboard-notification-content small {
+            color: #94a3b8;
+            font-size: 11px;
+        }
+
+
+        .dashboard-page .notification-status-dot {
+            width: 8px;
+            height: 8px;
+            flex-shrink: 0;
+            margin-top: 6px;
+            border-radius: 50%;
+            background: #6366f1;
+        }
+
+
+        /* =====================================
+           EMPTY STATE
+        ====================================== */
+
+        .dashboard-page .dashboard-empty-state {
+            padding: 35px 20px;
+            text-align: center;
+            border: 1px dashed #cbd5e1;
+            border-radius: 14px;
+            background: #f8fafc;
+        }
+
+
+        .dashboard-page .dashboard-empty-state .empty-icon {
+            width: 58px;
+            height: 58px;
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: #eef2ff;
+            color: #4f46e5;
+            font-size: 22px;
+        }
+
+
+        .dashboard-page .dashboard-empty-state h3 {
+            margin: 0 0 8px;
+            color: #1e293b;
+            font-size: 17px;
+        }
+
+
+        .dashboard-page .dashboard-empty-state p {
+            margin: 0 0 20px;
+            color: #64748b;
+            line-height: 1.6;
+        }
+
+
+        /* =====================================
+           ACADEMIC INFORMATION
+        ====================================== */
+
+        .dashboard-page .academic-info-list {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+
+        .dashboard-page .academic-info-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 15px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            background: #f8fafc;
+        }
+
+
+        .dashboard-page .academic-info-icon {
+            width: 42px;
+            height: 42px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            background: #eef2ff;
+            color: #4f46e5;
+        }
+
+
+        .dashboard-page .academic-info-content {
+            min-width: 0;
+        }
+
+
+        .dashboard-page .academic-info-content span {
+            display: block;
+            margin-bottom: 4px;
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+
+        .dashboard-page .academic-info-content strong {
+            display: block;
+            color: #1e293b;
+            font-size: 14px;
+            word-break: break-word;
+        }
+
+
+        /* =====================================
+           RESPONSIVE
+        ====================================== */
+
+        @media (max-width: 1200px) {
+
+            .dashboard-page .stats-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+
+            .dashboard-page .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+        }
+
+
+        @media (max-width: 700px) {
+
+            .dashboard-page .application-meta {
+                grid-template-columns: 1fr;
+            }
+
+
+            .dashboard-page .quick-access-grid {
+                grid-template-columns: 1fr;
+            }
+
+        }
+
+
+        @media (max-width: 600px) {
+
+            .dashboard-page .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+
+            .dashboard-page .form-actions {
+                flex-direction: column;
+            }
+
+
+            .dashboard-page .form-actions .btn {
+                width: 100%;
+            }
+
+        }
+
+    </style>
 
 </head>
 
@@ -208,8 +796,14 @@ if ($opportunityStats) {
 
         <div class="sidebar-brand">
 
+
             <div class="brand-logo">
-                CB
+
+                <img
+                    src="../assets/images/CB Logo Transparent.png"
+                    alt="CareerBridge Logo"
+                >
+
             </div>
 
 
@@ -224,6 +818,7 @@ if ($opportunityStats) {
                 </span>
 
             </div>
+
 
         </div>
 
@@ -363,7 +958,7 @@ if ($opportunityStats) {
          MAIN CONTENT
     ====================================== -->
 
-    <main class="main-content">
+    <main class="main-content dashboard-page">
 
 
         <!-- =====================================
@@ -390,12 +985,12 @@ if ($opportunityStats) {
 
                     Welcome back,
                     <strong>
-                        <?= htmlspecialchars(
-                            $user['full_name'],
-                            ENT_QUOTES,
-                            'UTF-8'
-                        ) ?>
+                        <?= e($userName) ?>
                     </strong>
+
+                    <br>
+
+                    Manage your career journey and stay updated with new opportunities.
 
                 </p>
 
@@ -410,13 +1005,7 @@ if ($opportunityStats) {
 
                 <div class="user-avatar">
 
-                    <?= strtoupper(
-                        substr(
-                            $user['full_name'],
-                            0,
-                            1
-                        )
-                    ) ?>
+                    <?= e($userInitial) ?>
 
                 </div>
 
@@ -424,13 +1013,7 @@ if ($opportunityStats) {
                 <div>
 
                     <strong>
-
-                        <?= htmlspecialchars(
-                            $user['full_name'],
-                            ENT_QUOTES,
-                            'UTF-8'
-                        ) ?>
-
+                        <?= e($userName) ?>
                     </strong>
 
 
@@ -609,7 +1192,7 @@ if ($opportunityStats) {
 
 
                             <p>
-                                Track the progress of your applications.
+                                Track the current progress of your applications.
                             </p>
 
                         </div>
@@ -727,7 +1310,7 @@ if ($opportunityStats) {
 
 
                             <p>
-                                Discover internships and career opportunities.
+                                Explore open internships and job opportunities.
                             </p>
 
                         </div>
@@ -762,7 +1345,7 @@ if ($opportunityStats) {
                         <div>
 
                             <span class="meta-label">
-                                EXPLORE
+                                OPPORTUNITY TYPES
                             </span>
 
                             <strong>
@@ -816,7 +1399,7 @@ if ($opportunityStats) {
 
 
                             <p>
-                                Quickly access your most important tools.
+                                Quickly access your essential career tools.
                             </p>
 
                         </div>
@@ -832,41 +1415,73 @@ if ($opportunityStats) {
                     </div>
 
 
-                    <div class="form-actions">
+                    <div class="quick-access-grid">
 
 
                         <a
                             href="profile.php"
-                            class="btn btn-secondary"
+                            class="quick-access-card"
                         >
 
-                            <i class="fa-solid fa-user"></i>
+                            <div class="quick-access-icon">
 
-                            Career Profile
+                                <i class="fa-solid fa-user"></i>
+
+                            </div>
+
+                            <strong>
+                                Career Profile
+                            </strong>
+
+                            <span>
+                                Update your information
+                            </span>
 
                         </a>
+
 
 
                         <a
                             href="skills.php"
-                            class="btn btn-secondary"
+                            class="quick-access-card"
                         >
 
-                            <i class="fa-solid fa-code"></i>
+                            <div class="quick-access-icon">
 
-                            My Skills
+                                <i class="fa-solid fa-bolt"></i>
+
+                            </div>
+
+                            <strong>
+                                My Skills
+                            </strong>
+
+                            <span>
+                                Manage your skills
+                            </span>
 
                         </a>
 
 
+
                         <a
                             href="resume.php"
-                            class="btn btn-secondary"
+                            class="quick-access-card"
                         >
 
-                            <i class="fa-solid fa-file-lines"></i>
+                            <div class="quick-access-icon">
 
-                            Resume / CV
+                                <i class="fa-solid fa-file-lines"></i>
+
+                            </div>
+
+                            <strong>
+                                Resume / CV
+                            </strong>
+
+                            <span>
+                                Manage your resume
+                            </span>
 
                         </a>
 
@@ -904,12 +1519,12 @@ if ($opportunityStats) {
 
 
                             <h2>
-                                Notifications
+                                Recent Notifications
                             </h2>
 
 
                             <p>
-                                Stay updated with important information.
+                                Stay updated with important career activities.
                             </p>
 
                         </div>
@@ -925,37 +1540,153 @@ if ($opportunityStats) {
                     </div>
 
 
-                    <div class="empty-state">
+                    <?php if (!$recentNotifications): ?>
 
 
-                        <div class="empty-icon">
+                        <div class="dashboard-empty-state">
 
-                            <i class="fa-solid fa-bell-slash"></i>
+
+                            <div class="empty-icon">
+
+                                <i class="fa-solid fa-bell-slash"></i>
+
+                            </div>
+
+
+                            <h3>
+                                You're All Caught Up
+                            </h3>
+
+
+                            <p>
+                                No notifications are available at the moment.
+                            </p>
+
 
                         </div>
 
 
-                        <h3>
-                            You're all caught up
-                        </h3>
+                    <?php else: ?>
 
 
-                        <p>
-                            No new notifications at the moment.
-                        </p>
+                        <div class="dashboard-notification-list">
 
+
+                            <?php foreach ($recentNotifications as $notification): ?>
+
+
+                                <?php
+
+                                $isUnread =
+                                    (int) $notification['is_read'] === 0;
+
+                                ?>
+
+
+                                <article
+                                    class="dashboard-notification-item <?= $isUnread
+                                        ? 'unread'
+                                        : ''
+                                    ?>"
+                                >
+
+
+                                    <div class="dashboard-notification-icon">
+
+                                        <i
+                                            class="<?= e(
+                                                getNotificationIconClass(
+                                                    (string) (
+                                                        $notification['type']
+                                                        ?? 'system'
+                                                    )
+                                                )
+                                            ) ?>"
+                                        ></i>
+
+                                    </div>
+
+
+                                    <div class="dashboard-notification-content">
+
+
+                                        <h4>
+
+                                            <?= e(
+                                                $notification['title']
+                                                ?? 'Notification'
+                                            ) ?>
+
+                                        </h4>
+
+
+                                        <p>
+
+                                            <?= e(
+                                                $notification['message']
+                                                ?? ''
+                                            ) ?>
+
+                                        </p>
+
+
+                                        <small>
+
+                                            <?= e(
+                                                formatNotificationDate(
+                                                    (string) (
+                                                        $notification['created_at']
+                                                        ?? ''
+                                                    )
+                                                )
+                                            ) ?>
+
+                                        </small>
+
+
+                                    </div>
+
+
+                                    <?php if ($isUnread): ?>
+
+                                        <span
+                                            class="notification-status-dot"
+                                            title="Unread notification"
+                                        ></span>
+
+                                    <?php endif; ?>
+
+
+                                </article>
+
+
+                            <?php endforeach; ?>
+
+
+                        </div>
+
+
+                    <?php endif; ?>
+
+
+                    <div class="form-actions">
 
                         <a
                             href="notifications.php"
                             class="btn btn-secondary"
                         >
 
+                            <i class="fa-solid fa-bell"></i>
+
                             View Notifications
 
-                            <i class="fa-solid fa-arrow-right"></i>
+                            <?php if ($unreadNotifications > 0): ?>
+
+                                (<?= $unreadNotifications ?>)
+
+                            <?php endif; ?>
 
                         </a>
-
 
                     </div>
 
@@ -1004,82 +1735,106 @@ if ($opportunityStats) {
                     <?php if ($student): ?>
 
 
-                        <div class="application-meta">
+                        <div class="academic-info-list">
 
 
-                            <div>
+                            <!-- UNIVERSITY -->
 
-                                <span class="meta-label">
+                            <div class="academic-info-item">
+
+
+                                <div class="academic-info-icon">
 
                                     <i class="fa-solid fa-building-columns"></i>
 
-                                    UNIVERSITY
-
-                                </span>
+                                </div>
 
 
-                                <strong>
+                                <div class="academic-info-content">
 
-                                    <?= htmlspecialchars(
-                                        $student['university_name']
-                                        ?? 'Not provided',
-                                        ENT_QUOTES,
-                                        'UTF-8'
-                                    ) ?>
+                                    <span>
+                                        UNIVERSITY
+                                    </span>
 
-                                </strong>
+                                    <strong>
+
+                                        <?= e(
+                                            $student['university_name']
+                                            ?? 'Not provided'
+                                        ) ?>
+
+                                    </strong>
+
+                                </div>
+
 
                             </div>
 
 
 
-                            <div>
+                            <!-- DEPARTMENT -->
 
-                                <span class="meta-label">
+                            <div class="academic-info-item">
+
+
+                                <div class="academic-info-icon">
 
                                     <i class="fa-solid fa-book"></i>
 
-                                    DEPARTMENT
-
-                                </span>
+                                </div>
 
 
-                                <strong>
+                                <div class="academic-info-content">
 
-                                    <?= htmlspecialchars(
-                                        $student['department']
-                                        ?? 'Not provided',
-                                        ENT_QUOTES,
-                                        'UTF-8'
-                                    ) ?>
+                                    <span>
+                                        DEPARTMENT
+                                    </span>
 
-                                </strong>
+                                    <strong>
+
+                                        <?= e(
+                                            $student['department']
+                                            ?? 'Not provided'
+                                        ) ?>
+
+                                    </strong>
+
+                                </div>
+
 
                             </div>
 
 
 
-                            <div>
+                            <!-- ACADEMIC LEVEL -->
 
-                                <span class="meta-label">
+                            <div class="academic-info-item">
+
+
+                                <div class="academic-info-icon">
 
                                     <i class="fa-solid fa-layer-group"></i>
 
-                                    ACADEMIC LEVEL
-
-                                </span>
+                                </div>
 
 
-                                <strong>
+                                <div class="academic-info-content">
 
-                                    <?= htmlspecialchars(
-                                        $student['academic_level']
-                                        ?? 'Not provided',
-                                        ENT_QUOTES,
-                                        'UTF-8'
-                                    ) ?>
+                                    <span>
+                                        ACADEMIC LEVEL
+                                    </span>
 
-                                </strong>
+                                    <strong>
+
+                                        <?= e(
+                                            $student['academic_level']
+                                            ?? 'Not provided'
+                                        ) ?>
+
+                                    </strong>
+
+                                </div>
+
 
                             </div>
 
@@ -1106,7 +1861,7 @@ if ($opportunityStats) {
                     <?php else: ?>
 
 
-                        <div class="empty-state">
+                        <div class="dashboard-empty-state">
 
 
                             <div class="empty-icon">
@@ -1122,8 +1877,8 @@ if ($opportunityStats) {
 
 
                             <p>
-                                Complete your student profile to get
-                                the most out of CareerBridge.
+                                Complete your student profile to unlock
+                                the full CareerBridge experience.
                             </p>
 
 
@@ -1134,7 +1889,7 @@ if ($opportunityStats) {
 
                                 <i class="fa-solid fa-plus"></i>
 
-                                Create Profile
+                                Complete Profile
 
                             </a>
 
@@ -1149,7 +1904,7 @@ if ($opportunityStats) {
 
 
 
-                <!-- INTERVIEW QUICK ACCESS -->
+                <!-- INTERVIEW MANAGEMENT -->
 
                 <section class="content-card">
 
@@ -1218,8 +1973,13 @@ if ($opportunityStats) {
 
         <footer class="page-footer">
 
-            &copy; <?= date('Y') ?>
-            CareerBridge — University Career Management Platform
+            <span>
+
+                &copy; <?= date('Y') ?>
+
+                CareerBridge — University Career Management Platform
+
+            </span>
 
         </footer>
 

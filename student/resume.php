@@ -295,12 +295,18 @@ if (isset($_GET['error'])) {
     <aside class="sidebar">
 
 
+        <!-- BRAND -->
+
         <div class="sidebar-brand">
 
 
             <div class="brand-logo">
 
-                <i class="fa-solid fa-bridge"></i>
+                <img
+                    src="../assets/images/CB Logo Transparent.png"
+                    alt="CareerBridge Logo"
+                    class="brand-logo-image"
+                >
 
             </div>
 

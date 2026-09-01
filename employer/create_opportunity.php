@@ -293,29 +293,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <aside class="sidebar">
 
+    <div class="sidebar-brand">
 
-        <div class="sidebar-brand">
+        <div class="brand-logo">
 
-
-            <div class="brand-logo">
-                CB
-            </div>
-
-
-            <div>
-
-                <h2>
-                    CareerBridge
-                </h2>
-
-                <span>
-                    Employer Portal
-                </span>
-
-            </div>
-
+            <img
+                src="../assets/images/CB Logo Transparent.png"
+                alt="CareerBridge Logo"
+            >
 
         </div>
+
+
+        <div class="brand-content">
+
+            <h2>
+                CareerBridge
+            </h2>
+
+            <span>
+                Employer Portal
+            </span>
+
+        </div>
+
+    </div>
 
 
         <div class="sidebar-divider"></div>

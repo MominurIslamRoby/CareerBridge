@@ -253,36 +253,31 @@ function formatDeadline(?string $deadline): string
 
     <aside class="sidebar">
 
+    <div class="sidebar-brand">
 
-        <!-- BRAND -->
+        <div class="brand-logo">
 
-        <div class="sidebar-brand">
-
-
-            <div class="brand-logo">
-
-                <img
-                    src="../assets/images/careerbridgelogo.png"
-                    alt="CareerBridge Logo"
-                >
-
-            </div>
-
-
-            <div>
-
-                <h2>
-                    CareerBridge
-                </h2>
-
-                <span>
-                    Employer Portal
-                </span>
-
-            </div>
-
+            <img
+                src="../assets/images/CB Logo Transparent.png"
+                alt="CareerBridge Logo"
+            >
 
         </div>
+
+
+        <div class="brand-content">
+
+            <h2>
+                CareerBridge
+            </h2>
+
+            <span>
+                Employer Portal
+            </span>
+
+        </div>
+
+    </div>
 
 
         <div class="sidebar-divider"></div>

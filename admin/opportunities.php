@@ -1,12 +1,5 @@
-```php
 <?php
 session_start();
-
-/*
-|--------------------------------------------------------------------------
-| DATABASE CONNECTION
-|--------------------------------------------------------------------------
-*/
 
 $conn = new mysqli(
     "localhost",
@@ -21,13 +14,6 @@ if ($conn->connect_error) {
 
 $conn->set_charset("utf8mb4");
 
-
-/*
-|--------------------------------------------------------------------------
-| ADMIN AUTHENTICATION
-|--------------------------------------------------------------------------
-*/
-
 if (
     !isset($_SESSION['user_id']) ||
     !isset($_SESSION['role']) ||
@@ -36,13 +22,6 @@ if (
     header("Location: ../auth/login.php");
     exit();
 }
-
-
-/*
-|--------------------------------------------------------------------------
-| CLOSE OPPORTUNITY
-|--------------------------------------------------------------------------
-*/
 
 $message = "";
 $messageType = "";
@@ -97,25 +76,11 @@ if (
     }
 }
 
-
-/*
-|--------------------------------------------------------------------------
-| SEARCH
-|--------------------------------------------------------------------------
-*/
-
 $search = "";
 
 if (isset($_GET['search'])) {
     $search = trim($_GET['search']);
 }
-
-
-/*
-|--------------------------------------------------------------------------
-| OPPORTUNITY LIST
-|--------------------------------------------------------------------------
-*/
 
 if ($search !== "") {
 
@@ -196,21 +161,11 @@ if ($search !== "") {
     );
 }
 
-
-/*
-|--------------------------------------------------------------------------
-| STATISTICS
-|--------------------------------------------------------------------------
-*/
-
 $totalOpportunities = 0;
 $openOpportunities = 0;
 $closedOpportunities = 0;
 $draftOpportunities = 0;
 $filledOpportunities = 0;
-
-
-/* Total */
 
 $result = $conn->query(
     "SELECT COUNT(*) AS total
@@ -222,9 +177,6 @@ if ($result) {
     $totalOpportunities =
         (int)$result->fetch_assoc()['total'];
 }
-
-
-/* Open */
 
 $result = $conn->query(
     "SELECT COUNT(*) AS total
@@ -238,9 +190,6 @@ if ($result) {
         (int)$result->fetch_assoc()['total'];
 }
 
-
-/* Closed */
-
 $result = $conn->query(
     "SELECT COUNT(*) AS total
      FROM opportunities
@@ -253,9 +202,6 @@ if ($result) {
         (int)$result->fetch_assoc()['total'];
 }
 
-
-/* Draft */
-
 $result = $conn->query(
     "SELECT COUNT(*) AS total
      FROM opportunities
@@ -267,9 +213,6 @@ if ($result) {
     $draftOpportunities =
         (int)$result->fetch_assoc()['total'];
 }
-
-
-/* Filled */
 
 $result = $conn->query(
     "SELECT COUNT(*) AS total
@@ -284,7 +227,6 @@ if ($result) {
 }
 
 ?>
-
 
 <!DOCTYPE html>
 
@@ -303,12 +245,7 @@ if ($result) {
     Opportunity Monitoring - CareerBridge
 </title>
 
-
 <style>
-
-/* ==========================================
-   GENERAL
-========================================== */
 
 * {
     margin: 0;
@@ -322,11 +259,6 @@ body {
     color: #333;
 }
 
-
-/* ==========================================
-   SIDEBAR
-========================================== */
-
 .sidebar {
     position: fixed;
     left: 0;
@@ -338,14 +270,12 @@ body {
     padding-top: 25px;
 }
 
-
 .logo {
     text-align: center;
     padding: 0 20px 30px;
     font-size: 22px;
     font-weight: bold;
 }
-
 
 .logo span {
     display: block;
@@ -355,7 +285,6 @@ body {
     opacity: .7;
 }
 
-
 .sidebar a {
     display: block;
     padding: 14px 25px;
@@ -363,31 +292,19 @@ body {
     text-decoration: none;
 }
 
-
 .sidebar a:hover {
     background: #374151;
 }
-
 
 .sidebar a.active {
     background: #4b5563;
     font-weight: bold;
 }
 
-
-/* ==========================================
-   MAIN
-========================================== */
-
 .main {
     margin-left: 240px;
     padding: 30px;
 }
-
-
-/* ==========================================
-   HEADER
-========================================== */
 
 .header {
     display: flex;
@@ -396,28 +313,20 @@ body {
     margin-bottom: 25px;
 }
 
-
 .header h1 {
     font-size: 28px;
     margin-bottom: 7px;
 }
-
 
 .header p {
     color: #777;
     font-size: 14px;
 }
 
-
 .admin-name {
     text-align: right;
     font-size: 14px;
 }
-
-
-/* ==========================================
-   MESSAGE
-========================================== */
 
 .message {
     padding: 14px 18px;
@@ -426,22 +335,15 @@ body {
     font-size: 14px;
 }
 
-
 .message-success {
     background: #dcfce7;
     color: #166534;
 }
 
-
 .message-error {
     background: #fee2e2;
     color: #991b1b;
 }
-
-
-/* ==========================================
-   STATISTICS
-========================================== */
 
 .stats {
     display: grid;
@@ -450,7 +352,6 @@ body {
     margin-bottom: 25px;
 }
 
-
 .stat-card {
     background: white;
     padding: 20px;
@@ -458,23 +359,16 @@ body {
     box-shadow: 0 2px 10px rgba(0,0,0,.06);
 }
 
-
 .stat-card h3 {
     color: #777;
     font-size: 13px;
     margin-bottom: 10px;
 }
 
-
 .stat-number {
     font-size: 28px;
     font-weight: bold;
 }
-
-
-/* ==========================================
-   SEARCH
-========================================== */
 
 .search-card {
     background: white;
@@ -484,12 +378,10 @@ body {
     box-shadow: 0 2px 10px rgba(0,0,0,.06);
 }
 
-
 .search-form {
     display: flex;
     gap: 10px;
 }
-
 
 .search-form input {
     flex: 1;
@@ -498,7 +390,6 @@ body {
     border-radius: 6px;
     font-size: 14px;
 }
-
 
 .search-form button {
     padding: 12px 22px;
@@ -509,11 +400,9 @@ body {
     cursor: pointer;
 }
 
-
 .search-form button:hover {
     background: #374151;
 }
-
 
 .clear-button {
     display: inline-block;
@@ -524,11 +413,6 @@ body {
     text-decoration: none;
 }
 
-
-/* ==========================================
-   TABLE
-========================================== */
-
 .table-card {
     background: white;
     border-radius: 10px;
@@ -536,23 +420,19 @@ body {
     overflow-x: auto;
 }
 
-
 .table-header {
     padding: 20px;
     border-bottom: 1px solid #eee;
 }
 
-
 .table-header h2 {
     font-size: 18px;
 }
-
 
 table {
     width: 100%;
     border-collapse: collapse;
 }
-
 
 th {
     background: #f8f9fa;
@@ -563,7 +443,6 @@ th {
     white-space: nowrap;
 }
 
-
 td {
     padding: 14px 13px;
     border-bottom: 1px solid #eee;
@@ -571,29 +450,21 @@ td {
     vertical-align: top;
 }
 
-
 .title {
     font-weight: bold;
     margin-bottom: 5px;
 }
-
 
 .company {
     color: #666;
     font-size: 12px;
 }
 
-
 .description {
     max-width: 300px;
     color: #666;
     line-height: 1.4;
 }
-
-
-/* ==========================================
-   TYPE
-========================================== */
 
 .type {
     display: inline-block;
@@ -604,22 +475,15 @@ td {
     font-weight: bold;
 }
 
-
 .type-internship {
     background: #e0f2fe;
     color: #075985;
 }
 
-
 .type-job {
     background: #ede9fe;
     color: #5b21b6;
 }
-
-
-/* ==========================================
-   STATUS
-========================================== */
 
 .status {
     display: inline-block;
@@ -630,59 +494,42 @@ td {
     text-transform: capitalize;
 }
 
-
 .status-open {
     background: #dcfce7;
     color: #166534;
 }
-
 
 .status-closed {
     background: #fee2e2;
     color: #991b1b;
 }
 
-
 .status-draft {
     background: #f3f4f6;
     color: #4b5563;
 }
-
 
 .status-filled {
     background: #dbeafe;
     color: #1e40af;
 }
 
-
-/* ==========================================
-   DEADLINE
-========================================== */
-
 .deadline {
     white-space: nowrap;
 }
-
 
 .deadline-expired {
     color: #dc2626;
     font-weight: bold;
 }
 
-
 .deadline-normal {
     color: #555;
 }
 
-
-/* ==========================================
-   ACTION
-========================================== */
-
 .action-form {
     display: inline;
 }
-
 
 .close-button {
     border: none;
@@ -694,21 +541,14 @@ td {
     font-size: 11px;
 }
 
-
 .close-button:hover {
     background: #b91c1c;
 }
-
 
 .closed-label {
     color: #888;
     font-size: 12px;
 }
-
-
-/* ==========================================
-   EMPTY
-========================================== */
 
 .empty {
     text-align: center;
@@ -716,16 +556,10 @@ td {
     color: #888;
 }
 
-
 .empty h3 {
     color: #555;
     margin-bottom: 8px;
 }
-
-
-/* ==========================================
-   RESPONSIVE
-========================================== */
 
 @media (max-width: 1200px) {
 
@@ -733,7 +567,6 @@ td {
         grid-template-columns: repeat(3, 1fr);
     }
 }
-
 
 @media (max-width: 900px) {
 
@@ -750,7 +583,6 @@ td {
         grid-template-columns: repeat(2, 1fr);
     }
 }
-
 
 @media (max-width: 600px) {
 
@@ -777,16 +609,9 @@ td {
 
 </head>
 
-
 <body>
 
-
-<!-- ==========================================
-     SIDEBAR
-========================================== -->
-
 <div class="sidebar">
-
 
     <div class="logo">
 
@@ -798,21 +623,17 @@ td {
 
     </div>
 
-
     <a href="dashboard.php">
         Dashboard
     </a>
-
 
     <a href="students.php">
         Students
     </a>
 
-
     <a href="employers.php">
         Employers
     </a>
-
 
     <a
         href="opportunities.php"
@@ -821,32 +642,19 @@ td {
         Opportunities
     </a>
 
-
     <a href="applications.php">
         Applications
     </a>
-
 
     <a href="../auth/logout.php">
         Logout
     </a>
 
-
 </div>
-
-
-
-<!-- ==========================================
-     MAIN
-========================================== -->
 
 <div class="main">
 
-
-    <!-- HEADER -->
-
     <div class="header">
-
 
         <div>
 
@@ -860,19 +668,13 @@ td {
 
         </div>
 
-
         <div class="admin-name">
 
             Administrator
 
         </div>
 
-
     </div>
-
-
-
-    <!-- MESSAGE -->
 
     <?php
 
@@ -900,14 +702,7 @@ td {
 
     ?>
 
-
-
-    <!-- ==========================================
-         STATISTICS
-    ========================================== -->
-
     <div class="stats">
-
 
         <div class="stat-card">
 
@@ -925,7 +720,6 @@ td {
 
         </div>
 
-
         <div class="stat-card">
 
             <h3>
@@ -941,7 +735,6 @@ td {
             </div>
 
         </div>
-
 
         <div class="stat-card">
 
@@ -959,7 +752,6 @@ td {
 
         </div>
 
-
         <div class="stat-card">
 
             <h3>
@@ -975,7 +767,6 @@ td {
             </div>
 
         </div>
-
 
         <div class="stat-card">
 
@@ -993,23 +784,14 @@ td {
 
         </div>
 
-
     </div>
 
-
-
-    <!-- ==========================================
-         SEARCH
-    ========================================== -->
-
     <div class="search-card">
-
 
         <form
             method="GET"
             class="search-form"
         >
-
 
             <input
                 type="text"
@@ -1020,11 +802,9 @@ td {
                 ?>"
             >
 
-
             <button type="submit">
                 Search
             </button>
-
 
             <?php
 
@@ -1045,20 +825,11 @@ td {
 
             ?>
 
-
         </form>
-
 
     </div>
 
-
-
-    <!-- ==========================================
-         TABLE
-    ========================================== -->
-
     <div class="table-card">
-
 
         <div class="table-header">
 
@@ -1082,10 +853,7 @@ td {
 
         </div>
 
-
-
         <table>
-
 
             <thead>
 
@@ -1131,9 +899,7 @@ td {
 
             </thead>
 
-
             <tbody>
-
 
             <?php
 
@@ -1147,7 +913,6 @@ td {
                     $opportunities->fetch_assoc()
                 ) {
 
-
                     $type =
                         strtolower(
                             $opportunity[
@@ -1155,20 +920,12 @@ td {
                             ]
                         );
 
-
                     $status =
                         strtolower(
                             $opportunity[
                                 'status'
                             ]
                         );
-
-
-                    /*
-                    |--------------------------------------------------------------------------
-                    | DEADLINE CHECK
-                    |--------------------------------------------------------------------------
-                    */
 
                     $deadlineClass =
                         "deadline-normal";
@@ -1190,11 +947,7 @@ td {
 
             ?>
 
-
                 <tr>
-
-
-                    <!-- OPPORTUNITY -->
 
                     <td>
 
@@ -1207,7 +960,6 @@ td {
                             ?>
 
                         </div>
-
 
                         <?php
 
@@ -1266,9 +1018,6 @@ td {
 
                     </td>
 
-
-                    <!-- EMPLOYER -->
-
                     <td>
 
                         <div class="company">
@@ -1284,9 +1033,6 @@ td {
                         </div>
 
                     </td>
-
-
-                    <!-- TYPE -->
 
                     <td>
 
@@ -1308,9 +1054,6 @@ td {
 
                     </td>
 
-
-                    <!-- LOCATION -->
-
                     <td>
 
                         <?php
@@ -1335,9 +1078,6 @@ td {
 
                     </td>
 
-
-                    <!-- DURATION -->
-
                     <td>
 
                         <?php
@@ -1361,9 +1101,6 @@ td {
                         ?>
 
                     </td>
-
-
-                    <!-- DEADLINE -->
 
                     <td>
 
@@ -1390,9 +1127,6 @@ td {
 
                     </td>
 
-
-                    <!-- STATUS -->
-
                     <td>
 
                         <span
@@ -1411,9 +1145,6 @@ td {
 
                     </td>
 
-
-                    <!-- CREATED -->
-
                     <td>
 
                         <?php
@@ -1431,11 +1162,7 @@ td {
 
                     </td>
 
-
-                    <!-- ACTION -->
-
                     <td>
-
 
                         <?php
 
@@ -1459,7 +1186,6 @@ td {
                                             ];
                                     ?>"
                                 >
-
 
                                 <button
                                     type="submit"
@@ -1491,12 +1217,9 @@ td {
 
                         ?>
 
-
                     </td>
 
-
                 </tr>
-
 
             <?php
 
@@ -1505,7 +1228,6 @@ td {
             } else {
 
             ?>
-
 
                 <tr>
 
@@ -1517,7 +1239,6 @@ td {
                         <h3>
                             No opportunities found
                         </h3>
-
 
                         <p>
 
@@ -1541,27 +1262,20 @@ td {
 
                 </tr>
 
-
             <?php
 
             }
 
             ?>
 
-
             </tbody>
-
 
         </table>
 
-
     </div>
 
-
 </div>
-
 
 </body>
 
 </html>
-```

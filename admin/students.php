@@ -1,32 +1,13 @@
-```php
 <?php
 session_start();
 
-/*
-|--------------------------------------------------------------------------
-| DATABASE CONNECTION
-|--------------------------------------------------------------------------
-*/
-
-$conn = new mysqli(
-    "localhost",
-    "root",
-    "",
-    "careerbridge_db"
-);
+$conn = new mysqli("localhost", "root", "", "careerbridge_db");
 
 if ($conn->connect_error) {
     die("Database connection failed.");
 }
 
 $conn->set_charset("utf8mb4");
-
-
-/*
-|--------------------------------------------------------------------------
-| ADMIN AUTHENTICATION
-|--------------------------------------------------------------------------
-*/
 
 if (
     !isset($_SESSION['user_id']) ||
@@ -37,28 +18,13 @@ if (
     exit();
 }
 
-
-/*
-|--------------------------------------------------------------------------
-| SEARCH
-|--------------------------------------------------------------------------
-*/
-
 $search = "";
 
 if (isset($_GET['search'])) {
     $search = trim($_GET['search']);
 }
 
-
-/*
-|--------------------------------------------------------------------------
-| STUDENT LIST
-|--------------------------------------------------------------------------
-*/
-
 if ($search !== "") {
-
     $searchValue = "%" . $search . "%";
 
     $stmt = $conn->prepare(
@@ -74,25 +40,19 @@ if ($search !== "") {
             s.career_summary,
             s.career_interests,
             s.created_at,
-
             u.full_name,
             u.email,
             u.account_status
-
-         FROM students s
-
-         INNER JOIN users u
-             ON s.user_id = u.user_id
-
-         WHERE
-             u.full_name LIKE ?
-             OR u.email LIKE ?
-             OR s.student_id_number LIKE ?
-             OR s.university_name LIKE ?
-             OR s.department LIKE ?
-             OR s.academic_level LIKE ?
-
-         ORDER BY u.full_name ASC"
+        FROM students s
+        INNER JOIN users u ON s.user_id = u.user_id
+        WHERE
+            u.full_name LIKE ?
+            OR u.email LIKE ?
+            OR s.student_id_number LIKE ?
+            OR s.university_name LIKE ?
+            OR s.department LIKE ?
+            OR s.academic_level LIKE ?
+        ORDER BY u.full_name ASC"
     );
 
     $stmt->bind_param(
@@ -106,11 +66,8 @@ if ($search !== "") {
     );
 
     $stmt->execute();
-
     $students = $stmt->get_result();
-
 } else {
-
     $students = $conn->query(
         "SELECT
             s.student_id,
@@ -124,139 +81,72 @@ if ($search !== "") {
             s.career_summary,
             s.career_interests,
             s.created_at,
-
             u.full_name,
             u.email,
             u.account_status
-
-         FROM students s
-
-         INNER JOIN users u
-             ON s.user_id = u.user_id
-
-         ORDER BY u.full_name ASC"
+        FROM students s
+        INNER JOIN users u ON s.user_id = u.user_id
+        ORDER BY u.full_name ASC"
     );
 }
-
-
-/*
-|--------------------------------------------------------------------------
-| TOTAL STUDENTS
-|--------------------------------------------------------------------------
-*/
 
 $totalStudents = 0;
 
 $result = $conn->query(
-    "SELECT COUNT(*) AS total
-     FROM students"
+    "SELECT COUNT(*) AS total FROM students"
 );
 
 if ($result) {
-    $totalStudents =
-        (int)$result->fetch_assoc()['total'];
+    $totalStudents = (int)$result->fetch_assoc()['total'];
 }
-
-
-/*
-|--------------------------------------------------------------------------
-| ACTIVE STUDENTS
-|--------------------------------------------------------------------------
-*/
 
 $activeStudents = 0;
 
 $result = $conn->query(
     "SELECT COUNT(*) AS total
-
-     FROM students s
-
-     INNER JOIN users u
-         ON s.user_id = u.user_id
-
-     WHERE u.account_status = 'active'"
+    FROM students s
+    INNER JOIN users u ON s.user_id = u.user_id
+    WHERE u.account_status = 'active'"
 );
 
 if ($result) {
-    $activeStudents =
-        (int)$result->fetch_assoc()['total'];
+    $activeStudents = (int)$result->fetch_assoc()['total'];
 }
-
-
-/*
-|--------------------------------------------------------------------------
-| INACTIVE STUDENTS
-|--------------------------------------------------------------------------
-*/
 
 $inactiveStudents = 0;
 
 $result = $conn->query(
     "SELECT COUNT(*) AS total
-
-     FROM students s
-
-     INNER JOIN users u
-         ON s.user_id = u.user_id
-
-     WHERE u.account_status = 'inactive'"
+    FROM students s
+    INNER JOIN users u ON s.user_id = u.user_id
+    WHERE u.account_status = 'inactive'"
 );
 
 if ($result) {
-    $inactiveStudents =
-        (int)$result->fetch_assoc()['total'];
+    $inactiveStudents = (int)$result->fetch_assoc()['total'];
 }
-
-
-/*
-|--------------------------------------------------------------------------
-| SUSPENDED STUDENTS
-|--------------------------------------------------------------------------
-*/
 
 $suspendedStudents = 0;
 
 $result = $conn->query(
     "SELECT COUNT(*) AS total
-
-     FROM students s
-
-     INNER JOIN users u
-         ON s.user_id = u.user_id
-
-     WHERE u.account_status = 'suspended'"
+    FROM students s
+    INNER JOIN users u ON s.user_id = u.user_id
+    WHERE u.account_status = 'suspended'"
 );
 
 if ($result) {
-    $suspendedStudents =
-        (int)$result->fetch_assoc()['total'];
+    $suspendedStudents = (int)$result->fetch_assoc()['total'];
 }
-
 ?>
 
-
 <!DOCTYPE html>
-
 <html lang="en">
-
 <head>
-
 <meta charset="UTF-8">
-
-<meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
->
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Students Management - CareerBridge</title>
-
-
 <style>
-
-/* ==========================================
-   GENERAL
-========================================== */
-
 * {
     margin: 0;
     padding: 0;
@@ -269,11 +159,6 @@ body {
     color: #333;
 }
 
-
-/* ==========================================
-   SIDEBAR
-========================================== */
-
 .sidebar {
     position: fixed;
     left: 0;
@@ -285,14 +170,12 @@ body {
     padding-top: 25px;
 }
 
-
 .logo {
     text-align: center;
     padding: 0 20px 30px;
     font-size: 22px;
     font-weight: bold;
 }
-
 
 .logo span {
     display: block;
@@ -302,7 +185,6 @@ body {
     opacity: .7;
 }
 
-
 .sidebar a {
     display: block;
     padding: 14px 25px;
@@ -310,31 +192,19 @@ body {
     text-decoration: none;
 }
 
-
 .sidebar a:hover {
     background: #374151;
 }
-
 
 .sidebar a.active {
     background: #4b5563;
     font-weight: bold;
 }
 
-
-/* ==========================================
-   MAIN
-========================================== */
-
 .main {
     margin-left: 240px;
     padding: 30px;
 }
-
-
-/* ==========================================
-   HEADER
-========================================== */
 
 .header {
     display: flex;
@@ -343,28 +213,20 @@ body {
     margin-bottom: 25px;
 }
 
-
 .header h1 {
     font-size: 28px;
     margin-bottom: 7px;
 }
-
 
 .header p {
     color: #777;
     font-size: 14px;
 }
 
-
 .admin-name {
     text-align: right;
     font-size: 14px;
 }
-
-
-/* ==========================================
-   STATISTICS
-========================================== */
 
 .stats {
     display: grid;
@@ -373,7 +235,6 @@ body {
     margin-bottom: 25px;
 }
 
-
 .stat-card {
     background: white;
     padding: 22px;
@@ -381,23 +242,16 @@ body {
     box-shadow: 0 2px 10px rgba(0,0,0,.06);
 }
 
-
 .stat-card h3 {
     color: #777;
     font-size: 14px;
     margin-bottom: 10px;
 }
 
-
 .stat-number {
     font-size: 30px;
     font-weight: bold;
 }
-
-
-/* ==========================================
-   SEARCH
-========================================== */
 
 .search-card {
     background: white;
@@ -407,12 +261,10 @@ body {
     box-shadow: 0 2px 10px rgba(0,0,0,.06);
 }
 
-
 .search-form {
     display: flex;
     gap: 10px;
 }
-
 
 .search-form input {
     flex: 1;
@@ -421,7 +273,6 @@ body {
     border-radius: 6px;
     font-size: 14px;
 }
-
 
 .search-form button {
     padding: 12px 22px;
@@ -432,11 +283,9 @@ body {
     cursor: pointer;
 }
 
-
 .search-form button:hover {
     background: #374151;
 }
-
 
 .clear-button {
     display: inline-block;
@@ -447,11 +296,6 @@ body {
     text-decoration: none;
 }
 
-
-/* ==========================================
-   TABLE
-========================================== */
-
 .table-card {
     background: white;
     border-radius: 10px;
@@ -459,23 +303,19 @@ body {
     overflow-x: auto;
 }
 
-
 .table-header {
     padding: 20px;
     border-bottom: 1px solid #eee;
 }
 
-
 .table-header h2 {
     font-size: 18px;
 }
-
 
 table {
     width: 100%;
     border-collapse: collapse;
 }
-
 
 th {
     background: #f8f9fa;
@@ -486,7 +326,6 @@ th {
     white-space: nowrap;
 }
 
-
 td {
     padding: 14px 13px;
     border-bottom: 1px solid #eee;
@@ -494,22 +333,15 @@ td {
     vertical-align: top;
 }
 
-
 .student-name {
     font-weight: bold;
     margin-bottom: 4px;
 }
 
-
 .student-email {
     color: #888;
     font-size: 12px;
 }
-
-
-/* ==========================================
-   STATUS
-========================================== */
 
 .status {
     display: inline-block;
@@ -520,28 +352,20 @@ td {
     text-transform: capitalize;
 }
 
-
 .status-active {
     background: #dcfce7;
     color: #166534;
 }
-
 
 .status-inactive {
     background: #fef3c7;
     color: #92400e;
 }
 
-
 .status-suspended {
     background: #fee2e2;
     color: #991b1b;
 }
-
-
-/* ==========================================
-   EMPTY STATE
-========================================== */
 
 .empty {
     text-align: center;
@@ -549,27 +373,18 @@ td {
     color: #888;
 }
 
-
 .empty h3 {
     color: #555;
     margin-bottom: 8px;
 }
 
-
-/* ==========================================
-   RESPONSIVE
-========================================== */
-
 @media (max-width: 1100px) {
-
     .stats {
         grid-template-columns: repeat(2, 1fr);
     }
 }
 
-
 @media (max-width: 800px) {
-
     .sidebar {
         width: 200px;
     }
@@ -589,9 +404,7 @@ td {
     }
 }
 
-
 @media (max-width: 600px) {
-
     .sidebar {
         position: relative;
         width: 100%;
@@ -610,572 +423,164 @@ td {
         flex-direction: column;
     }
 }
-
 </style>
-
 </head>
-
-
 <body>
-
-
-<!-- ==========================================
-     SIDEBAR
-========================================== -->
-
 <div class="sidebar">
-
     <div class="logo">
-
         CareerBridge
-
-        <span>
-            Administrator Panel
-        </span>
-
+        <span>Administrator Panel</span>
     </div>
-
-
-    <a href="dashboard.php">
-        Dashboard
-    </a>
-
-
-    <a
-        href="students.php"
-        class="active"
-    >
-        Students
-    </a>
-
-
-    <a href="employers.php">
-        Employers
-    </a>
-
-
-    <a href="opportunities.php">
-        Opportunities
-    </a>
-
-
-    <a href="applications.php">
-        Applications
-    </a>
-
-
-    <a href="../auth/logout.php">
-        Logout
-    </a>
-
+    <a href="dashboard.php">Dashboard</a>
+    <a href="students.php" class="active">Students</a>
+    <a href="employers.php">Employers</a>
+    <a href="opportunities.php">Opportunities</a>
+    <a href="applications.php">Applications</a>
+    <a href="../auth/logout.php">Logout</a>
 </div>
 
-
-
-<!-- ==========================================
-     MAIN CONTENT
-========================================== -->
-
 <div class="main">
-
-
-    <!-- HEADER -->
-
     <div class="header">
-
         <div>
-
-            <h1>
-                Students Management
-            </h1>
-
-            <p>
-                View registered students and their account information.
-            </p>
-
+            <h1>Students Management</h1>
+            <p>View registered students and their account information.</p>
         </div>
-
-
-        <div class="admin-name">
-
-            Administrator
-
-        </div>
-
+        <div class="admin-name">Administrator</div>
     </div>
-
-
-
-    <!-- ==========================================
-         STATISTICS
-    ========================================== -->
 
     <div class="stats">
-
-
         <div class="stat-card">
-
-            <h3>
-                Total Students
-            </h3>
-
-            <div class="stat-number">
-
-                <?php
-                echo $totalStudents;
-                ?>
-
-            </div>
-
+            <h3>Total Students</h3>
+            <div class="stat-number"><?php echo $totalStudents; ?></div>
         </div>
-
-
         <div class="stat-card">
-
-            <h3>
-                Active Students
-            </h3>
-
-            <div class="stat-number">
-
-                <?php
-                echo $activeStudents;
-                ?>
-
-            </div>
-
+            <h3>Active Students</h3>
+            <div class="stat-number"><?php echo $activeStudents; ?></div>
         </div>
-
-
         <div class="stat-card">
-
-            <h3>
-                Inactive Students
-            </h3>
-
-            <div class="stat-number">
-
-                <?php
-                echo $inactiveStudents;
-                ?>
-
-            </div>
-
+            <h3>Inactive Students</h3>
+            <div class="stat-number"><?php echo $inactiveStudents; ?></div>
         </div>
-
-
         <div class="stat-card">
-
-            <h3>
-                Suspended Students
-            </h3>
-
-            <div class="stat-number">
-
-                <?php
-                echo $suspendedStudents;
-                ?>
-
-            </div>
-
+            <h3>Suspended Students</h3>
+            <div class="stat-number"><?php echo $suspendedStudents; ?></div>
         </div>
-
-
     </div>
 
-
-
-    <!-- ==========================================
-         SEARCH
-    ========================================== -->
-
     <div class="search-card">
-
-        <form
-            method="GET"
-            class="search-form"
-        >
-
+        <form method="GET" class="search-form">
             <input
                 type="text"
                 name="search"
                 placeholder="Search by name, email, student ID, university, department or academic level..."
-                value="<?php
-                    echo htmlspecialchars($search);
-                ?>"
+                value="<?php echo htmlspecialchars($search); ?>"
             >
-
-
-            <button type="submit">
-                Search
-            </button>
-
-
-            <?php
-
-            if ($search !== "") {
-
-            ?>
-
-                <a
-                    href="students.php"
-                    class="clear-button"
-                >
-                    Clear
-                </a>
-
-            <?php
-
-            }
-
-            ?>
-
+            <button type="submit">Search</button>
+            <?php if ($search !== "") { ?>
+                <a href="students.php" class="clear-button">Clear</a>
+            <?php } ?>
         </form>
-
     </div>
 
-
-
-    <!-- ==========================================
-         STUDENT TABLE
-    ========================================== -->
-
     <div class="table-card">
-
-
         <div class="table-header">
-
             <h2>
-
                 <?php
-
                 if ($search !== "") {
                     echo "Search Results";
                 } else {
                     echo "Registered Students";
                 }
-
                 ?>
-
             </h2>
-
         </div>
 
-
-
         <table>
-
-
             <thead>
-
                 <tr>
-
-                    <th>
-                        Student
-                    </th>
-
-                    <th>
-                        Student ID
-                    </th>
-
-                    <th>
-                        University
-                    </th>
-
-                    <th>
-                        Department
-                    </th>
-
-                    <th>
-                        Academic Level
-                    </th>
-
-                    <th>
-                        Phone
-                    </th>
-
-                    <th>
-                        Location
-                    </th>
-
-                    <th>
-                        Account Status
-                    </th>
-
-                    <th>
-                        Registered
-                    </th>
-
+                    <th>Student</th>
+                    <th>Student ID</th>
+                    <th>University</th>
+                    <th>Department</th>
+                    <th>Academic Level</th>
+                    <th>Phone</th>
+                    <th>Location</th>
+                    <th>Account Status</th>
+                    <th>Registered</th>
                 </tr>
-
             </thead>
-
-
             <tbody>
-
-
             <?php
-
-            if (
-                $students &&
-                $students->num_rows > 0
-            ) {
-
-                while (
-                    $student =
-                    $students->fetch_assoc()
-                ) {
-
-                    $status =
-                        strtolower(
-                            $student['account_status']
-                        );
-
+            if ($students && $students->num_rows > 0) {
+                while ($student = $students->fetch_assoc()) {
+                    $status = strtolower($student['account_status']);
             ?>
-
-
                 <tr>
-
-
-                    <!-- NAME AND EMAIL -->
-
                     <td>
-
                         <div class="student-name">
-
-                            <?php
-                            echo htmlspecialchars(
-                                $student['full_name']
-                            );
-                            ?>
-
+                            <?php echo htmlspecialchars($student['full_name']); ?>
                         </div>
-
-
                         <div class="student-email">
-
-                            <?php
-                            echo htmlspecialchars(
-                                $student['email']
-                            );
-                            ?>
-
+                            <?php echo htmlspecialchars($student['email']); ?>
                         </div>
-
                     </td>
-
-
-                    <!-- STUDENT ID -->
-
                     <td>
-
-                        <?php
-                        echo htmlspecialchars(
-                            $student[
-                                'student_id_number'
-                            ]
-                        );
-                        ?>
-
+                        <?php echo htmlspecialchars($student['student_id_number']); ?>
                     </td>
-
-
-                    <!-- UNIVERSITY -->
-
                     <td>
-
-                        <?php
-                        echo htmlspecialchars(
-                            $student[
-                                'university_name'
-                            ] ?? '-'
-                        );
-                        ?>
-
+                        <?php echo htmlspecialchars($student['university_name'] ?? '-'); ?>
                     </td>
-
-
-                    <!-- DEPARTMENT -->
-
                     <td>
-
-                        <?php
-                        echo htmlspecialchars(
-                            $student[
-                                'department'
-                            ] ?? '-'
-                        );
-                        ?>
-
+                        <?php echo htmlspecialchars($student['department'] ?? '-'); ?>
                     </td>
-
-
-                    <!-- ACADEMIC LEVEL -->
-
                     <td>
-
-                        <?php
-                        echo htmlspecialchars(
-                            $student[
-                                'academic_level'
-                            ] ?? '-'
-                        );
-                        ?>
-
+                        <?php echo htmlspecialchars($student['academic_level'] ?? '-'); ?>
                     </td>
-
-
-                    <!-- PHONE -->
-
                     <td>
-
-                        <?php
-                        echo htmlspecialchars(
-                            $student[
-                                'phone'
-                            ] ?? '-'
-                        );
-                        ?>
-
+                        <?php echo htmlspecialchars($student['phone'] ?? '-'); ?>
                     </td>
-
-
-                    <!-- LOCATION -->
-
                     <td>
-
-                        <?php
-                        echo htmlspecialchars(
-                            $student[
-                                'location'
-                            ] ?? '-'
-                        );
-                        ?>
-
+                        <?php echo htmlspecialchars($student['location'] ?? '-'); ?>
                     </td>
-
-
-                    <!-- ACCOUNT STATUS -->
-
                     <td>
-
-                        <span
-                            class="status status-<?php
-                                echo htmlspecialchars(
-                                    $status
-                                );
-                            ?>"
-                        >
-
-                            <?php
-                            echo htmlspecialchars(
-                                $student[
-                                    'account_status'
-                                ]
-                            );
-                            ?>
-
+                        <span class="status status-<?php echo htmlspecialchars($status); ?>">
+                            <?php echo htmlspecialchars($student['account_status']); ?>
                         </span>
-
                     </td>
-
-
-                    <!-- CREATED DATE -->
-
                     <td>
-
                         <?php
-
-                        if (
-                            !empty(
-                                $student['created_at']
-                            )
-                        ) {
-
-                            echo date(
-                                "d M Y",
-                                strtotime(
-                                    $student[
-                                        'created_at'
-                                    ]
-                                )
-                            );
-
+                        if (!empty($student['created_at'])) {
+                            echo date("d M Y", strtotime($student['created_at']));
                         } else {
-
                             echo "-";
-
                         }
-
                         ?>
-
                     </td>
-
-
                 </tr>
-
-
             <?php
-
                 }
-
             } else {
-
             ?>
-
-
                 <tr>
-
-                    <td
-                        colspan="9"
-                        class="empty"
-                    >
-
-                        <h3>
-                            No students found
-                        </h3>
-
+                    <td colspan="9" class="empty">
+                        <h3>No students found</h3>
                         <p>
-
                             <?php
-
                             if ($search !== "") {
-
                                 echo "No students match your search.";
-
                             } else {
-
                                 echo "There are currently no registered students.";
-
                             }
-
                             ?>
-
                         </p>
-
                     </td>
-
                 </tr>
-
-
             <?php
-
             }
-
             ?>
-
-
             </tbody>
-
         </table>
-
     </div>
-
-
 </div>
-
-
 </body>
-
 </html>
-```

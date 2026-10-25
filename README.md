@@ -169,7 +169,7 @@ For a safer implementation, the application should use password hashing, server-
 
 **MD. MOMINUR ISLAM ROBY**
 
-*Project developer and sole credited contributor in this README.*
+*Project developer.*
 
 ## 🎓 Academic Information
 

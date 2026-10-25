@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300" role="img" aria-labelledby="title desc">
+  <title id="title">CareerBridge — Internship opportunities, connected</title>
+  <desc id="desc">A dark blue and teal animated banner showing students, employers, and a connected career pathway.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b1226"/>
+      <stop offset="100%" stop-color="#123c5a"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#2dd4bf"/>
+    </linearGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="1200" height="300" rx="26" fill="url(#bg)"/>
+  <circle cx="1040" cy="30" r="140" fill="#38bdf8" opacity=".07"/>
+  <circle cx="1120" cy="245" r="170" fill="#2dd4bf" opacity=".08"/>
+  <path d="M710 210 C800 120 870 250 950 160 S1080 95 1150 145" fill="none" stroke="url(#accent)" stroke-width="3" stroke-linecap="round" stroke-dasharray="9 12" opacity=".9">
+    <animate attributeName="stroke-dashoffset" from="0" to="-84" dur="4s" repeatCount="indefinite"/>
+  </path>
+  <g transform="translate(760 85)">
+    <rect x="0" y="0" width="110" height="135" rx="16" fill="#132b47" stroke="#38bdf8" stroke-opacity=".7"/>
+    <rect x="16" y="18" width="78" height="8" rx="4" fill="#38bdf8" opacity=".9"/>
+    <rect x="16" y="40" width="58" height="6" rx="3" fill="#9fb8d0" opacity=".75"/>
+    <rect x="16" y="57" width="72" height="6" rx="3" fill="#9fb8d0" opacity=".45"/>
+    <rect x="16" y="80" width="78" height="27" rx="8" fill="url(#accent)"/>
+    <path d="M34 93 l8 7 16 -16" fill="none" stroke="#062033" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <animateTransform attributeName="transform" type="translate" values="760 88;760 80;760 88" dur="4s" repeatCount="indefinite"/>
+  </g>
+  <g transform="translate(930 105)" filter="url(#glow)">
+    <circle cx="32" cy="22" r="17" fill="#38bdf8"/>
+    <path d="M5 84 C5 54 59 54 59 84 L59 96 L5 96 Z" fill="#38bdf8" opacity=".95"/>
+    <animateTransform attributeName="transform" type="translate" values="930 105;930 98;930 105" dur="3.5s" repeatCount="indefinite"/>
+  </g>
+  <g transform="translate(1040 140)">
+    <circle cx="28" cy="19" r="14" fill="#2dd4bf"/>
+    <path d="M4 75 C4 48 52 48 52 75 L52 84 L4 84 Z" fill="#2dd4bf"/>
+    <animateTransform attributeName="transform" type="translate" values="1040 140;1040 146;1040 140" dur="3s" repeatCount="indefinite"/>
+  </g>
+  <g fill="#dff7ff" font-family="Inter,Segoe UI,Arial,sans-serif">
+    <text x="66" y="75" font-size="18" font-weight="700" letter-spacing="4" fill="#67e8f9">CAREER • CONNECT • GROW</text>
+    <text x="62" y="145" font-size="52" font-weight="800" letter-spacing="-1.4">CareerBridge</text>
+    <text x="66" y="184" font-size="22" fill="#c5d9eb">Ultimate Internship Management System</text>
+    <rect x="66" y="218" width="225" height="4" rx="2" fill="url(#accent)"/>
+    <text x="66" y="252" font-size="15" fill="#a9c5dc">Students  •  Employers  •  Opportunities</text>
+  </g>
+  <circle cx="690" cy="80" r="5" fill="#2dd4bf"><animate attributeName="opacity" values=".3;1;.3" dur="2.4s" repeatCount="indefinite"/></circle>
+  <circle cx="715" cy="235" r="4" fill="#38bdf8"><animate attributeName="opacity" values="1;.2;1" dur="1.8s" repeatCount="indefinite"/></circle>
+</svg>
